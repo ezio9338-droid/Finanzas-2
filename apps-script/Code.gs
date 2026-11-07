@@ -15,7 +15,7 @@
  */
 
 var ZONA = 'Europe/Madrid';
-var API_VERSION = 1;
+var API_VERSION = 2; // 2: emoji propio en los gastos fijos
 
 var HOJAS = {
   Movimientos: {
@@ -37,7 +37,7 @@ var HOJAS = {
   Fijos: {
     cols: [
       ['id', 'ID'], ['concepto', 'Concepto'], ['tipo', 'Tipo'], ['importe', 'Importe'], ['cat', 'Categoría'], ['sub', 'Subcategoría'],
-      ['frecuencia', 'Frecuencia'], ['dia', 'Día del mes'], ['cada', 'Cada (días)'], ['desde', 'Último pago'], ['activo', 'Activo'], ['orden', 'Orden']
+      ['frecuencia', 'Frecuencia'], ['dia', 'Día del mes'], ['cada', 'Cada (días)'], ['desde', 'Último pago'], ['activo', 'Activo'], ['orden', 'Orden'], ['icono', 'Emoji']
     ],
     fechas: ['desde'], dinero: ['importe'], bool: ['activo'], meses: []
   },
@@ -301,7 +301,8 @@ function validarOps(ops) {
           id: vId(f.id), concepto: cf, tipo: vUna(f.tipo, ['gasto', 'ahorro']), importe: vPos(f.importe, true),
           cat: vTexto(f.cat, 60), sub: vTexto(f.sub, 60), frecuencia: frec,
           dia: frec === 'mensual' ? vEntero(f.dia, 1, 31) : '', cada: frec === 'dias' ? vEntero(f.cada, 1, 366) : '',
-          desde: frec === 'dias' ? vFecha(f.desde) : '', activo: f.activo !== false, orden: vEntero(f.orden, 0, 10000, true)
+          desde: frec === 'dias' ? vFecha(f.desde) : '', activo: f.activo !== false, orden: vEntero(f.orden, 0, 10000, true),
+          icono: vTexto(f.icono, 16).trim()
         } };
       case 'borrarFijo': return { op: 'borrarFijo', id: vId(op.id) };
       case 'cats':
@@ -392,7 +393,7 @@ function leerEstado() {
   var fijos = leerHoja('Fijos').map(function (f) {
     f.id = texto(f.id); f.tipo = texto(f.tipo || 'gasto').toLowerCase(); f.frecuencia = texto(f.frecuencia || 'mensual').toLowerCase();
     f.dia = f.dia === '' ? '' : +f.dia; f.cada = f.cada === '' ? '' : +f.cada; f.orden = f.orden === '' ? '' : +f.orden;
-    f.concepto = texto(f.concepto); f.cat = texto(f.cat); f.sub = texto(f.sub);
+    f.concepto = texto(f.concepto); f.cat = texto(f.cat); f.sub = texto(f.sub); f.icono = texto(f.icono);
     return f;
   });
   var cats = leerHoja('Categorias').map(function (c) {
@@ -413,6 +414,9 @@ function escribirHoja(nombre, filas) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombre);
   var spec = HOJAS[nombre], n = spec.cols.length, claves = spec.cols.map(function (c) { return c[0]; });
   var last = sh.getLastRow();
+  // Cabecera al día (por si una versión nueva añade columnas a una hoja ya creada)
+  var cab = sh.getRange(1, 1, 1, n), titulos = spec.cols.map(function (c) { return c[1]; });
+  if (cab.getValues()[0].join('|') !== titulos.join('|')) cab.setValues([titulos]).setFontWeight('bold').setBackground('#7c6cf0').setFontColor('#ffffff');
   if (last > 1) sh.getRange(2, 1, last - 1, n).clearContent();
   if (!filas.length) return;
   var vals = filas.map(function (o) {
