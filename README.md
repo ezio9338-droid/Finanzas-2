@@ -100,6 +100,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 ```
 Saldo Santander = saldo inicial + ingresos − gastos ± transferencias
 Te quedaría     = saldo Santander − (fijos del mes sin marcar + partidas sin marcar)
+                  (el ahorro a Trade Republic no se resta: solo está para marcarlo)
 Trade Republic  = saldo inicial + aportaciones − retiradas + intereses confirmados
 ```
 
