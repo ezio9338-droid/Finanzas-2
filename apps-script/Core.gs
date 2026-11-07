@@ -189,7 +189,8 @@ var HuchaCore = (function () {
 
   function resumenPrevision(st, mes, hoy) {
     var lineas = prevision(st, mes, hoy), pendiente = 0, total = 0;
-    lineas.forEach(function (l) { total += l.importe; if (!l.hecho) pendiente += l.importe; });
+    // El ahorro a Trade Republic aparece en la lista para marcarlo, pero no se resta de «Te quedaría».
+    lineas.forEach(function (l) { if (l.esAhorro) return; total += l.importe; if (!l.hecho) pendiente += l.importe; });
     var s = saldo(st, SANT);
     return { lineas: lineas, pendiente: r2(pendiente), total: r2(total), saldo: s, quedaria: r2(s - pendiente) };
   }

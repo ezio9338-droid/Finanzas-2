@@ -26,7 +26,7 @@ App web (PWA) de finanzas personales para iPhone. Guarda los datos en una hoja d
 
 En este repositorio de GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch**. Elige la rama `main` y la carpeta `/ (root)` y pulsa **Save**. Al cabo de un minuto, la app estará en:
 
-**https://ezio9338-droid.github.io/Finanzas-Cati/**
+**https://ezio9338-droid.github.io/Finanzas-2/**
 
 ### 2. Crea la hoja de cálculo
 
@@ -69,7 +69,7 @@ En el editor de Apps Script:
 
 ### 6. Instala la app en el iPhone
 
-1. Abre en **Safari** https://ezio9338-droid.github.io/Finanzas-Cati/
+1. Abre en **Safari** https://ezio9338-droid.github.io/Finanzas-2/
 2. Pulsa **Compartir → Añadir a pantalla de inicio**.
 3. Abre Hucha desde el icono, pega la **URL** y la **clave secreta** y pulsa **Conectar con mi hoja**.
 4. Elige **Usar Face ID**. Se crea una passkey «Hucha» en el llavero de iCloud.
@@ -100,6 +100,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 ```
 Saldo Santander = saldo inicial + ingresos − gastos ± transferencias
 Te quedaría     = saldo Santander − (fijos del mes sin marcar + partidas sin marcar)
+                  (el ahorro a Trade Republic no se resta: solo está para marcarlo)
 Trade Republic  = saldo inicial + aportaciones − retiradas + intereses confirmados
 ```
 

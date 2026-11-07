@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var C = HuchaCore, SANT = C.SANT, TRADE = C.TRADE;
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
   // ---------------------------------------------------------------- utilidades
@@ -218,7 +218,7 @@
     if (l.hecho) {
       var real = C.num(l.hecho.importe);
       info = 'Pagado el ' + fCorta(l.hecho.fecha) + (Math.abs(real - l.importe) > 0.004 ? ' · previsto ' + fmt(l.importe) : '');
-    } else if (l.esAhorro) info = (l.fecha ? 'Día ' + +l.fecha.slice(8) + ' · ' : '') + 'a Trade Republic';
+    } else if (l.esAhorro) info = (l.fecha ? 'Día ' + +l.fecha.slice(8) + ' · ' : '') + 'a Trade Republic · no se resta';
     else if (l.origen === 'prev') info = 'Añadido a mano';
     else if (!l.fecha) info = 'Sin día fijo';
     else info = (l.ref.frecuencia === 'dias' ? fCorta(l.fecha) : 'Día ' + +l.fecha.slice(8)) + (l.retrasado ? ' · con retraso' : '');
