@@ -167,7 +167,7 @@ var HuchaCore = (function () {
       ocurrencias(f, mes).forEach(function (o) {
         var esAhorro = f.tipo === 'ahorro', hecho = h[o.clave] || null;
         out.push({
-          clave: o.clave, origen: 'fijo', ref: f, concepto: esAhorro ? 'Ahorro ' + nombreMes(mes) : f.concepto,
+          clave: o.clave, origen: 'fijo', ref: f, icono: f.icono || '', concepto: esAhorro ? 'Ahorro ' + nombreMes(mes) : f.concepto,
           importe: esAhorro ? objetivoMes(st, mes) : num(f.importe), cat: esAhorro ? 'Ahorro' : f.cat, sub: esAhorro ? 'Trade Republic' : f.sub,
           fecha: o.fecha, esAhorro: esAhorro, hecho: hecho,
           retrasado: !hecho && !!o.fecha && !!hoy && diffDays(o.fecha, hoy) >= 2
@@ -177,7 +177,7 @@ var HuchaCore = (function () {
     (st.previsiones || []).forEach(function (p) {
       if (p.mes !== mes) return;
       var clave = 'prev:' + p.id;
-      out.push({ clave: clave, origen: 'prev', ref: p, concepto: p.concepto, importe: num(p.importe), cat: p.cat, sub: p.sub, fecha: '', esAhorro: false, hecho: h[clave] || null, retrasado: false });
+      out.push({ clave: clave, origen: 'prev', ref: p, icono: '', concepto: p.concepto, importe: num(p.importe), cat: p.cat, sub: p.sub, fecha: '', esAhorro: false, hecho: h[clave] || null, retrasado: false });
     });
     out.sort(function (a, b) {
       if (!!a.hecho !== !!b.hecho) return a.hecho ? 1 : -1;
