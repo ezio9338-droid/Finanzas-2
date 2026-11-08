@@ -86,6 +86,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 | Una cena que me pagarán | En el gasto, activa **Compartido**, pon **tu parte** y quién te debe el resto (**Repartir a partes iguales** lo calcula). | Si una parte son varias cantidades, pulsa 🧮 junto a la cifra y súmalas.
 | Registrar un Bizum que salda una deuda | **＋ → Ingreso → Salda una deuda** y elige la persona. O en **Deudas**, toca la persona → **Registrar un pago**. |
 | Me devuelven una compra | **＋ → Ingreso → Es una devolución**, busca la compra y pon lo que te devuelven. No se crea un movimiento nuevo: la compra original pasa a costar lo neto (en su mes) y el saldo sube el día de la devolución. También desde la compra: tócala → **Registrar una devolución**. |
+| Pagar algo que debo | En **Deudas → Debo**, activa su interruptor: se abre el gasto ya relleno (concepto e importe). Elige la categoría y guarda; entonces sale de la lista. Si cancelas, se queda. |
 | Cobrar la nómina | **＋ → Ingreso → Nómina**. Después la app ofrece marcar el ahorro del mes. |
 | Pagar un gasto fijo o una partida | Activa su interruptor en **Previsión del mes**, corrige el importe si hace falta y pulsa **Marcar como pagado**. |
 | Preparar la previsión del mes | En Santander, **＋ Añadir partida** (por ejemplo, «Cena invitación, 100 €»). |

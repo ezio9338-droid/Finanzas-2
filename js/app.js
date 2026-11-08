@@ -652,6 +652,7 @@
         h += '<datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
       }
       h += '<p class="hint" data-err>' + esc(pista()) + '</p>';
+      if (f.deboId) h += '<p class="note">Al guardar, se quitará de tu lista «Debo». Si cancelas, se queda donde estaba.</p>';
       if (f.previsto) h += '<p class="note">Viene de la previsión del mes' + (f.prevImporte !== '' ? ' (previsto ' + fmt(f.prevImporte) + ')' : '') + '.</p>';
       if (f.id) h += '<button class="btn block danger" data-act="borrar-mov">Borrar movimiento</button>';
       return h;
@@ -779,10 +780,11 @@
       ops.push({ op: 'mov', mov: m2 });
       var teniaDeudas = f.id && (V.deudas || []).some(function (d) { return d.movId === f.id; });
       if (lista.length || teniaDeudas) ops.push({ op: 'deudas', movId: m2.id, lista: lista });
+      if (f.deboId) ops.push({ op: 'borrarDebo', id: f.deboId }); // pagada una deuda de «Debo»: sale de la lista
       var nuevo = !f.id;
       cerrarHoja(true);
       commit(ops);
-      toast(nuevo ? 'Apuntado' : 'Guardado');
+      toast(f.deboId ? 'Apuntado y quitado de «Debo»' : nuevo ? 'Apuntado' : 'Guardado');
       if (nuevo && m2.tipo === 'ingreso' && m2.cat === 'Nómina') {
         var ah = C.prevision(V, C.mesDe(hoy()), hoy()).filter(function (l) { return l.esAhorro && !l.hecho; })[0];
         if (ah) setTimeout(function () { abrirMarcar(ah, '¿Transfieres ya el ahorro a Trade Republic?'); }, 400);
@@ -980,7 +982,7 @@
         '<div class="field"><div class="frow"><span class="k">A quién</span><input data-f="persona" value="' + esc(s.persona) + '" placeholder="Nombre" maxlength="40" autocapitalize="words"></div>' +
         '<div class="frow"><span class="k">Por qué</span><input data-f="concepto" value="' + esc(s.concepto) + '" placeholder="Ej.: Regalo de Paula" maxlength="120"></div>' +
         '<div class="frow"><span class="k">Cantidad</span><input class="amt" data-f="importe" inputmode="decimal" placeholder="Opcional" value="' + esc(s.importe) + '"></div></div>' +
-        '<p class="hint" data-err>Solo es un recordatorio: no cambia tu saldo. Cuando pagues, apúntalo como un gasto normal.</p>' +
+        '<p class="hint" data-err>Solo es un recordatorio: no cambia tu saldo. Cuando pagues, activa su interruptor y se abrirá el gasto ya relleno para que lo revises y lo guardes.</p>' +
         (s.id ? '<button class="btn block danger" data-act="borrar">Quitar de la lista</button>' : ''),
       onInput: function (e) { if (e.target.dataset.f) s[e.target.dataset.f] = e.target.value; },
       onClick: function (e) { if (e.target.closest('[data-act="borrar"]')) { cerrarHoja(true); commit([{ op: 'borrarDebo', id: s.id }]); } },
@@ -1236,7 +1238,11 @@
     else if (act === 'persona') abrirPersona(id);
     else if (act === 'debo') { var dd = (V.debo || []).filter(function (x) { return x.id === id; })[0]; if (dd) abrirDebo(dd); }
     else if (act === 'debo-nuevo') abrirDebo(null);
-    else if (act === 'debo-ok') { a.setAttribute('aria-checked', 'true'); setTimeout(function () { commit([{ op: 'borrarDebo', id: id }]); toast('Quitado de la lista'); }, 250); }
+    else if (act === 'debo-ok') {
+      // Abre el movimiento ya relleno; solo se apunta (y se quita de la lista) si lo guardas.
+      var db = (V.debo || []).filter(function (x) { return x.id === id; })[0];
+      if (db) abrirMovimiento(null, { tipo: 'gasto', concepto: 'A ' + db.persona + (db.concepto ? ' · ' + db.concepto : ''), importe: db.importe !== '' && db.importe != null ? aInput(db.importe) : '', deboId: db.id });
+    }
     else if (act === 'fijo') { var fj = (V.fijos || []).filter(function (x) { return x.id === id; })[0]; if (fj) abrirFijo(fj); }
     else if (act === 'fijo-nuevo') abrirFijo(null);
     else if (act === 'cat') abrirCategoria(id);
