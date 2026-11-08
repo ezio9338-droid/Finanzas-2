@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var C = HuchaCore, SANT = C.SANT, TRADE = C.TRADE;
-  var VERSION = '1.0.1';
+  var VERSION = '1.1.0';
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
   // ---------------------------------------------------------------- utilidades
@@ -109,7 +109,7 @@
       body: JSON.stringify({ clave: sesion.clave, ops: ops })
     }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j.ok) throw new Error(j.error || 'Error desconocido');
-      snapshot = j.estado; queue = queue.slice(enviadas); seguridad = j.seguridad || null;
+      snapshot = j.estado; queue = queue.slice(enviadas); seguridad = j.seguridad || null; sync.version = j.version || 1;
       sync.estado = queue.length ? 'pend' : 'ok'; sync.ultimo = Date.now(); sync.error = '';
       persist(); recompute(); if (!hoja) render(); else pintarEstado();
     }).catch(function (e) {
@@ -225,7 +225,7 @@
     var importe = l.hecho ? C.num(l.hecho.importe) : l.importe;
     var tap = l.origen === 'prev' ? ' tap" data-act="partida" data-id="' + esc(l.ref.id) : '';
     return '<div class="item' + (l.retrasado ? ' late' : '') + (l.hecho ? ' done' : '') + tap + '">' +
-      '<div class="emo' + (l.esAhorro ? ' tr' : '') + '">' + (l.esAhorro ? '🐷' : icono(l.cat)) + '</div>' +
+      '<div class="emo' + (l.esAhorro ? ' tr' : '') + '">' + esc(l.icono || (l.esAhorro ? '🐷' : icono(l.cat))) + '</div>' +
       '<div class="grow"><div class="t">' + esc(l.concepto) + '</div><small>' + info + '</small></div>' +
       '<span class="amt">' + fmt(importe) + '</span>' +
       sw(!!l.hecho, l.hecho ? 'desmarcar' : 'marcar', 'data-k="' + esc(l.clave) + '" aria-label="' + esc(l.concepto) + ' pagado"') + '</div>';
@@ -387,7 +387,7 @@
       var frec = f.frecuencia === 'mensual' ? 'Día ' + f.dia : f.frecuencia === 'dias' ? 'Cada ' + f.cada + ' días' : 'Sin día fijo';
       if (ahorro) frec += ' · a Trade Republic';
       if (f.activo === false) frec += ' · pausado';
-      return '<div class="item tap' + (f.activo === false ? ' done' : '') + '" data-act="fijo" data-id="' + esc(f.id) + '"><div class="emo' + (ahorro ? ' tr' : '') + '">' + (ahorro ? '🐷' : icono(f.cat)) + '</div><div class="grow"><div class="t">' + esc(f.concepto) + '</div><small>' + frec + '</small></div>' +
+      return '<div class="item tap' + (f.activo === false ? ' done' : '') + '" data-act="fijo" data-id="' + esc(f.id) + '"><div class="emo' + (ahorro ? ' tr' : '') + '">' + esc(f.icono || (ahorro ? '🐷' : icono(f.cat))) + '</div><div class="grow"><div class="t">' + esc(f.concepto) + '</div><small>' + frec + '</small></div>' +
         '<span class="amt">' + (ahorro ? fmt(C.objetivoMes(V, C.mesDe(hoy()))) : fmt(f.importe)) + '</span><span class="chev">›</span></div>';
     }).join('') + '<button class="addrow" data-act="fijo-nuevo">＋ Añadir gasto fijo</button></div>' +
       '<p class="note">No se apuntan solos: cada mes aparecen en la previsión y tú los marcas cuando te los cobren.</p>';
@@ -902,18 +902,20 @@
 
   // ---------- Gastos fijos ----------
   function abrirFijo(fj) {
-    var s = fj ? clone(fj) : { id: '', concepto: '', tipo: 'gasto', importe: '', cat: '', sub: '', frecuencia: 'mensual', dia: '', cada: '', desde: '', activo: true, orden: '' };
+    var s = fj ? clone(fj) : { id: '', concepto: '', tipo: 'gasto', importe: '', cat: '', sub: '', frecuencia: 'mensual', dia: '', cada: '', desde: '', activo: true, orden: '', icono: '' };
+    s.icono = s.icono || '';
     s.importe = aInput(s.importe); s.dia = s.dia === '' ? '' : String(s.dia); s.cada = s.cada === '' ? '' : String(s.cada);
     function pintar() {
       var h = '<div class="seg"><button class="' + (s.tipo === 'gasto' ? 'on' : '') + '" data-set="tipo" data-v="gasto">Gasto</button><button class="' + (s.tipo === 'ahorro' ? 'on' : '') + '" data-set="tipo" data-v="ahorro">Ahorro a Trade Republic</button></div>' +
-        '<div class="field"><div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(s.concepto) + '" placeholder="Ej.: Seguro médico" maxlength="80"></div>';
+        '<div class="field"><div class="frow"><span class="k">Emoji</span><input data-f="icono" value="' + esc(s.icono) + '" placeholder="' + esc(s.tipo === 'ahorro' ? '🐷' : (s.cat ? icono(s.cat) : '😀')) + ' (el de la categoría)" maxlength="16" aria-label="Emoji del gasto fijo"></div>' +
+        '<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(s.concepto) + '" placeholder="Ej.: Seguro médico" maxlength="80"></div>';
       if (s.tipo === 'gasto') {
         h += '<div class="frow"><span class="k">Importe</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(s.importe) + '"></div>' +
           '<div class="frow"><span class="k">Categoría</span><select data-f="cat">' + opcionesCat('gasto', s.cat, 'Elegir…') + '</select></div>' +
           (s.cat && subs(s.cat).length ? '<div class="frow"><span class="k">Subcategoría</span><select data-f="sub">' + opcionesSub(s.cat, s.sub) + '</select></div>' : '');
       }
       h += '</div>';
-      if (s.tipo === 'ahorro') h += '<p class="hint">El importe es el objetivo de cada mes (' + fmt(C.objetivoMes(V, C.mesDe(hoy()))) + ' este mes). Se cambia en Ahorro, tocando la cifra del mes.</p>';
+      if (s.tipo === 'ahorro') h += '<p class="hint">El importe es el objetivo de cada mes (' + fmt(C.objetivoMes(V, C.mesDe(hoy()))) + ' este mes). Se cambia en Ahorro, tocando la cifra del mes. Aparece en la previsión cuando apuntas la nómina.</p>';
       h += '<div class="seg">' + [['mensual', 'Día del mes'], ['dias', 'Cada X días'], ['sin', 'Sin día fijo']].map(function (o) {
         return '<button class="' + (s.frecuencia === o[0] ? 'on' : '') + '" data-set="frecuencia" data-v="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div><div class="field">';
@@ -921,6 +923,7 @@
       if (s.frecuencia === 'dias') h += '<div class="frow"><span class="k">Cada (días)</span><input data-f="cada" inputmode="numeric" placeholder="28" value="' + esc(s.cada) + '"></div>' +
         '<div class="frow"><span class="k">Último pago</span><input type="date" data-f="desde" value="' + esc(s.desde) + '"></div>';
       h += '<div class="frow"><span>Activo</span>' + sw(s.activo !== false, 'toggle-activo') + '</div></div>' +
+        (modo() === 'online' && sync.version && sync.version < 2 ? '<p class="hint bad">Para que el emoji se guarde, actualiza el Apps Script (Code.gs y Core.gs) y publica una versión nueva.</p>' : '') +
         '<p class="hint" data-err>' + (s.frecuencia === 'sin' ? 'Aparecerá cada mes en la previsión, sin aviso de retraso.' : 'Si pasan 2 días del día previsto sin marcarlo, verás un aviso.') + ' Desactívalo para pausarlo.</p>' +
         (s.id ? '<button class="btn block danger" data-act="borrar">Borrar gasto fijo</button>' : '');
       return h;
@@ -941,7 +944,7 @@
       },
       onGuardar: function () {
         if (!s.concepto.trim()) return error(body, 'Escribe el concepto.');
-        var f = { id: s.id || C.uid(), concepto: s.concepto.trim(), tipo: s.tipo, importe: '', cat: '', sub: '', frecuencia: s.frecuencia, dia: '', cada: '', desde: '', activo: s.activo !== false, orden: s.orden };
+        var f = { id: s.id || C.uid(), concepto: s.concepto.trim(), tipo: s.tipo, importe: '', cat: '', sub: '', frecuencia: s.frecuencia, dia: '', cada: '', desde: '', activo: s.activo !== false, orden: s.orden, icono: (s.icono || '').trim() };
         if (s.tipo === 'gasto') {
           f.importe = C.r2(C.num(s.importe));
           if (!(f.importe > 0)) return error(body, 'Escribe el importe.');
