@@ -15,16 +15,17 @@
  */
 
 var ZONA = 'Europe/Madrid';
-var API_VERSION = 2; // 2: emoji propio en los gastos fijos
+var API_VERSION = 3; // 2: emoji propio en los gastos fijos · 3: devoluciones
 
 var HOJAS = {
   Movimientos: {
     cols: [
       ['id', 'ID'], ['fecha', 'Fecha'], ['tipo', 'Tipo'], ['importe', 'Importe'], ['cuenta', 'Cuenta'], ['destino', 'Cuenta destino'],
       ['cat', 'Categoría'], ['sub', 'Subcategoría'], ['concepto', 'Concepto'], ['miParte', 'Mi parte'],
-      ['pagaDeuda', 'Salda deuda de'], ['previsto', 'Partida de previsión'], ['prevImporte', 'Importe previsto'], ['act', 'Actualizado']
+      ['pagaDeuda', 'Salda deuda de'], ['previsto', 'Partida de previsión'], ['prevImporte', 'Importe previsto'], ['act', 'Actualizado'],
+      ['devuelto', 'Devuelto'], ['fechaDevuelto', 'Fecha devolución']
     ],
-    fechas: ['fecha'], dinero: ['importe', 'miParte', 'prevImporte'], bool: [], meses: []
+    fechas: ['fecha', 'fechaDevuelto'], dinero: ['importe', 'miParte', 'prevImporte', 'devuelto'], bool: [], meses: []
   },
   Deudas: {
     cols: [['id', 'ID'], ['movId', 'Movimiento'], ['fecha', 'Fecha'], ['persona', 'Persona'], ['importe', 'Importe'], ['concepto', 'Concepto']],
@@ -274,10 +275,14 @@ function validarOps(ops) {
         if (tipo === 'transferencia' && destino === cuenta) throw invalida();
         var previsto = vTexto(m.previsto, 100);
         if (previsto && !RE_PREVISTO.test(previsto)) throw invalida();
+        var importe = vPos(m.importe), devuelto = vPos(m.devuelto, true), fechaDev = vFecha(m.fechaDevuelto, true);
+        if (devuelto !== '' && (tipo !== 'gasto' || devuelto > importe)) throw invalida();
+        if (devuelto === '' || devuelto === 0) { devuelto = ''; fechaDev = ''; }
+        else if (!fechaDev) throw invalida();
         return { op: 'mov', mov: {
-          id: vId(m.id), fecha: vFecha(m.fecha), tipo: tipo, importe: vPos(m.importe), cuenta: cuenta, destino: destino,
+          id: vId(m.id), fecha: vFecha(m.fecha), tipo: tipo, importe: importe, cuenta: cuenta, destino: destino,
           cat: vTexto(m.cat, 60), sub: vTexto(m.sub, 60), concepto: vTexto(m.concepto, 120),
-          miParte: vPos(m.miParte, true), pagaDeuda: vTexto(m.pagaDeuda, 40), previsto: previsto, prevImporte: vPos(m.prevImporte, true),
+          miParte: vPos(m.miParte, true), pagaDeuda: vTexto(m.pagaDeuda, 40), previsto: previsto, prevImporte: vPos(m.prevImporte, true), devuelto: devuelto, fechaDevuelto: fechaDev,
           act: typeof m.act === 'number' && isFinite(m.act) ? m.act : Date.now()
         } };
       case 'borrar': return { op: 'borrar', id: vId(op.id) };

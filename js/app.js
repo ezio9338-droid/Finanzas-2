@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var C = HuchaCore, SANT = C.SANT, TRADE = C.TRADE;
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
   // ---------------------------------------------------------------- utilidades
@@ -201,7 +201,7 @@
     if (!rp.lineas.length) h += '<div class="empty">Añade lo que prevés gastar este mes.</div>';
     h += pend.map(filaPrev).join('');
     if (hechas.length) {
-      var totalH = hechas.reduce(function (a, l) { return a + C.num(l.hecho.importe); }, 0);
+      var totalH = hechas.reduce(function (a, l) { return a + C.neto(l.hecho); }, 0);
       h += '<details class="done-list"><summary>Ya pagados (' + hechas.length + ') · ' + fmt(totalH) + '</summary>' + hechas.map(filaPrev).join('') + '</details>';
     }
     h += '<button class="addrow" data-act="partida-nueva">＋ Añadir partida</button></div>';
@@ -216,13 +216,13 @@
   function filaPrev(l) {
     var info;
     if (l.hecho) {
-      var real = C.num(l.hecho.importe);
+      var real = C.neto(l.hecho);
       info = 'Pagado el ' + fCorta(l.hecho.fecha) + (Math.abs(real - l.importe) > 0.004 ? ' · previsto ' + fmt(l.importe) : '');
     } else if (l.esAhorro) info = (l.fecha ? 'Día ' + +l.fecha.slice(8) + ' · ' : '') + 'a Trade Republic · no se resta';
     else if (l.origen === 'prev') info = 'Añadido a mano';
     else if (!l.fecha) info = 'Sin día fijo';
     else info = (l.ref.frecuencia === 'dias' ? fCorta(l.fecha) : 'Día ' + +l.fecha.slice(8)) + (l.retrasado ? ' · con retraso' : '');
-    var importe = l.hecho ? C.num(l.hecho.importe) : l.importe;
+    var importe = l.hecho ? C.neto(l.hecho) : l.importe;
     var tap = l.origen === 'prev' ? ' tap" data-act="partida" data-id="' + esc(l.ref.id) : '';
     return '<div class="item' + (l.retrasado ? ' late' : '') + (l.hecho ? ' done' : '') + tap + '">' +
       '<div class="emo' + (l.esAhorro ? ' tr' : '') + '">' + esc(l.icono || (l.esAhorro ? '🐷' : icono(l.cat))) + '</div>' +
@@ -247,7 +247,9 @@
       emo = '<div class="emo">' + icono(m.cat) + '</div>'; titulo = m.concepto || m.sub || m.cat || 'Gasto';
       sub.push(esc(m.cat + (m.sub ? ' › ' + m.sub : '')));
       if (m.miParte !== '' && m.miParte != null) sub.push('tu parte ' + fmt(m.miParte));
-      imp = '−' + fmt(m.importe); cls = 'neg';
+      var dev = C.devuelto(m);
+      if (dev) sub.push('↩️ devuelto ' + fmt(dev) + ' de ' + fmt(m.importe));
+      imp = '−' + fmt(C.neto(m)); cls = C.neto(m) > 0 ? 'neg' : 'mut';
     }
     signo = imp;
     return '<div class="item tap" data-act="editar" data-id="' + esc(m.id) + '">' + emo + '<div class="grow"><div class="t">' + esc(titulo) + '</div><small>' + sub.join(' · ') + '</small></div><span class="amt ' + cls + '">' + signo + '</span></div>';
@@ -448,7 +450,7 @@
       '<div class="legend"><span><i style="background:var(--pos)"></i>Ingresos</span><span><i style="background:var(--acc2)"></i>Gastos</span></div></div>';
 
     var rp = C.resumenPrevision(V, mes, t), realH = 0, prevH = 0;
-    rp.lineas.forEach(function (l) { if (l.hecho) { realH += C.num(l.hecho.importe); prevH += l.importe; } });
+    rp.lineas.forEach(function (l) { if (l.hecho) { realH += C.neto(l.hecho); prevH += l.importe; } });
     var fuera = C.resumenMes(V, mes).fueraPrevision;
     h += '<div class="card"><h3>Previsión de ' + C.nombreMes(mes) + '</h3><table class="data">' +
       '<tr><td>Previsto en total</td><td class="amt">' + fmt(rp.total) + '</td></tr>' +
@@ -587,10 +589,11 @@
         id: m.id, tipo: m.tipo, cat: m.cat, sub: m.sub, concepto: m.concepto || '', importe: aInput(m.importe), fecha: m.fecha,
         compartido: m.tipo === 'gasto' && m.miParte !== '' && m.miParte != null, miParte: aInput(m.miParte),
         personas: ds.map(function (d) { return { nombre: d.persona, importe: aInput(d.importe) }; }),
-        salda: m.pagaDeuda || '', dir: m.cuenta === TRADE ? 'ts' : 'st', previsto: m.previsto || '', prevImporte: m.prevImporte === undefined ? '' : m.prevImporte
+        salda: m.pagaDeuda || '', dir: m.cuenta === TRADE ? 'ts' : 'st', previsto: m.previsto || '', prevImporte: m.prevImporte === undefined ? '' : m.prevImporte,
+        devuelto: aInput(m.devuelto), fechaDevuelto: m.fechaDevuelto || '', devolOn: false, devol: '', devolQ: ''
       };
     } else {
-      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '' };
+      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', devolOn: false, devol: '', devolQ: '' };
       for (var k in (preset || {})) f[k] = preset[k];
     }
     if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' });
@@ -605,7 +608,13 @@
       if (f.tipo === 'ingreso') {
         var ds = C.deudas(V), nombres = ds.map(function (d) { return d.persona; });
         if (f.salda && nombres.map(C.clavePersona).indexOf(C.clavePersona(f.salda)) < 0) nombres.unshift(f.salda);
-        h += '<div class="field"><div class="frow"><span>Salda una deuda</span>' + sw(!!f.salda || f.saldaOn, 'toggle-salda') + '</div></div>';
+        h += '<div class="field"><div class="frow"><span>Es una devolución</span>' + sw(f.devolOn, 'toggle-devol') + '</div>' +
+          '<div class="frow"><span>Salda una deuda</span>' + sw(!!f.salda || f.saldaOn, 'toggle-salda') + '</div></div>';
+        if (f.devolOn) {
+          var g = f.devol ? mov(f.devol) : null;
+          h += g ? '<div class="card"><h3>Compra que te devuelven <button data-set="devol" data-v="">Cambiar</button></h3>' + filaMov(g).replace('data-act="editar"', '') + '</div>'
+            : '<label class="search">🔍<input data-f="devolQ" type="search" placeholder="Busca la compra (concepto)" value="' + esc(f.devolQ) + '" autocomplete="off"></label><div class="card" id="devol-lista">' + listaDevol() + '</div>';
+        }
         if (f.salda || f.saldaOn) {
           h += nombres.length ? '<div class="chips wrap">' + nombres.map(function (n) {
             var d = ds.filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(n); })[0];
@@ -613,7 +622,7 @@
           }).join('') + '</div>' : '<p class="hint">Nadie te debe nada ahora mismo.</p>';
         }
       }
-      if ((f.tipo === 'gasto' || f.tipo === 'ingreso') && !(f.tipo === 'ingreso' && (f.salda || f.saldaOn))) {
+      if ((f.tipo === 'gasto' || f.tipo === 'ingreso') && !(f.tipo === 'ingreso' && (f.salda || f.saldaOn || f.devolOn))) {
         h += '<div class="cats">' + cats(f.tipo).map(function (c) {
           return '<button class="cat' + (f.cat === c.cat ? ' on' : '') + '" data-set="cat" data-v="' + esc(c.cat) + '"><span>' + esc(c.icono || '•') + '</span>' + esc(c.cat) + '</button>';
         }).join('') + '</div>';
@@ -621,25 +630,38 @@
         if (ss.length) h += '<div class="chips">' + ss.map(function (s) { return '<button class="chip' + (f.sub === s ? ' on' : '') + '" data-set="sub" data-v="' + esc(s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
       }
       h += '<div class="field">' +
-        '<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(f.concepto) + '" placeholder="' + esc(placeholderConcepto()) + '" maxlength="120" enterkeyhint="done"></div>' +
-        '<div class="frow"><span class="k">Cantidad</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.importe) + '" enterkeyhint="done"></div>' +
+        (f.devolOn ? '' : '<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(f.concepto) + '" placeholder="' + esc(placeholderConcepto()) + '" maxlength="120" enterkeyhint="done"></div>') +
+        '<div class="frow"><span class="k">Cantidad</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.importe) + '" enterkeyhint="done"><button class="calcbtn" data-act="calc" data-t="importe" aria-label="Calculadora para la cantidad">🧮</button></div>' +
         '<div class="frow"><span class="k">Fecha</span><input type="date" data-f="fecha" value="' + esc(f.fecha) + '"></div></div>';
       if (f.tipo === 'gasto') {
         h += '<div class="field"><div class="frow"><span>Compartido</span>' + sw(f.compartido, 'toggle-comp') + '</div>';
         if (f.compartido) {
-          h += '<div class="frow"><span class="k">Mi parte</span><input class="amt" data-f="miParte" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.miParte) + '"></div>';
+          h += '<div class="frow"><span class="k">Mi parte</span><input class="amt" data-f="miParte" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.miParte) + '"><button class="calcbtn" data-act="calc" data-t="miParte" aria-label="Calculadora para mi parte">🧮</button></div>';
           f.personas.forEach(function (p, i) {
             h += '<div class="person"><span>👤</span><input class="name" data-p="' + i + '" data-pk="nombre" list="dl-personas" placeholder="Nombre" value="' + esc(p.nombre) + '" maxlength="40" autocapitalize="words">' +
-              '<input class="imp amt" data-p="' + i + '" data-pk="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(p.importe) + '"><button class="x" data-act="quitar-persona" data-i="' + i + '" aria-label="Quitar">✕</button></div>';
+              '<input class="imp amt" data-p="' + i + '" data-pk="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(p.importe) + '"><button class="calcbtn" data-act="calc" data-t="p' + i + '" aria-label="Calculadora para ' + esc(p.nombre || 'esta persona') + '">🧮</button><button class="x" data-act="quitar-persona" data-i="' + i + '" aria-label="Quitar">✕</button></div>';
           });
           h += '<div class="frow"><button class="link" data-act="add-persona">＋ Añadir persona</button><button class="link" data-act="repartir">Repartir a partes iguales</button></div>';
         }
-        h += '</div><datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
+        h += '</div>';
+        if (f.id && C.num(f.devuelto) > 0) {
+          h += '<div class="field"><div class="frow"><span class="k">↩️ Devuelto</span><input class="amt" data-f="devuelto" inputmode="decimal" value="' + esc(f.devuelto) + '"></div>' +
+            '<div class="frow"><span class="k">Fecha devolución</span><input type="date" data-f="fechaDevuelto" value="' + esc(f.fechaDevuelto) + '"></div></div>';
+        }
+        if (f.id) h += '<button class="btn block" data-act="nueva-devol">↩️ Registrar una devolución</button>';
+        h += '<datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
       }
       h += '<p class="hint" data-err>' + esc(pista()) + '</p>';
       if (f.previsto) h += '<p class="note">Viene de la previsión del mes' + (f.prevImporte !== '' ? ' (previsto ' + fmt(f.prevImporte) + ')' : '') + '.</p>';
       if (f.id) h += '<button class="btn block danger" data-act="borrar-mov">Borrar movimiento</button>';
       return h;
+    }
+    function listaDevol() {
+      var q = normal(f.devolQ).trim();
+      var gs = V.movimientos.filter(function (x) { return x.tipo === 'gasto' && C.neto(x) > 0 && (!q || normal([x.concepto, x.cat, x.sub].join(' ')).indexOf(q) >= 0); })
+        .sort(ordenMovs).slice(0, 15);
+      if (!gs.length) return '<div class="empty">No hay compras que coincidan.</div>';
+      return gs.map(function (x) { return filaMov(x).replace('data-act="editar" data-id=', 'data-set="devol" data-v='); }).join('');
     }
     function placeholderConcepto() {
       if (f.tipo === 'transferencia') return f.dir === 'st' ? 'Ahorro ' + C.nombreMes(C.mesDe(f.fecha || t)) : 'Traspaso a Santander';
@@ -661,6 +683,7 @@
       onGuardar: guardar,
       onInput: function (e) {
         var el = e.target;
+        if (el.dataset.f === 'devolQ') { if (e.type !== 'input') return; f.devolQ = el.value; var dl = $('#devol-lista', body); if (dl) dl.innerHTML = listaDevol(); return; }
         if (el.dataset.f) { f[el.dataset.f] = el.value; actualizarPista(); }
         else if (el.dataset.p !== undefined) { f.personas[+el.dataset.p][el.dataset.pk] = el.value; actualizarPista(); }
       },
@@ -671,6 +694,7 @@
           if (k === 'tipo' && f.tipo !== v) { f.tipo = v; f.cat = ''; f.sub = ''; }
           else if (k === 'cat') { f.cat = v; f.sub = ''; }
           else if (k === 'sub') f.sub = f.sub === v ? '' : v;
+          else if (k === 'devol') { f.devol = v; var gd = v ? mov(v) : null; if (gd) f.importe = aInput(C.neto(gd)); }
           else if (k === 'salda') { f.salda = v; var d = C.deudas(V).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(v); })[0]; if (d && !f.importe) f.importe = aInput(d.pendiente); }
           else f[k] = v;
           repintar(body, pintar()); return;
@@ -678,7 +702,18 @@
         if (!a) return;
         var act = a.dataset.act;
         if (act === 'toggle-comp') { f.compartido = !f.compartido; if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' }); }
-        else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else f.saldaOn = true; }
+        else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else { f.saldaOn = true; f.devolOn = false; f.devol = ''; } }
+        else if (act === 'toggle-devol') { f.devolOn = !f.devolOn; f.devol = ''; if (f.devolOn) { f.salda = ''; f.saldaOn = false; } }
+        else if (act === 'nueva-devol') { var orig = mov(f.id); if (orig) { cerrarHoja(); abrirMovimiento(null, { tipo: 'ingreso', devolOn: true, devol: orig.id, importe: aInput(C.neto(orig)) }); } return; }
+        else if (act === 'calc') {
+          var tg = a.dataset.t, esP = tg.charAt(0) === 'p', pi = esP ? +tg.slice(1) : -1;
+          var titulo = tg === 'importe' ? 'Cantidad' : tg === 'miParte' ? 'Mi parte' : 'Debe ' + (f.personas[pi].nombre.trim() || 'esta persona');
+          abrirCalc(titulo, esP ? f.personas[pi].importe : f[tg], function (total) {
+            if (esP) f.personas[pi].importe = aInput(total); else f[tg] = aInput(total);
+            repintar(body, pintar());
+          });
+          return;
+        }
         else if (act === 'add-persona') f.personas.push({ nombre: '', importe: '' });
         else if (act === 'quitar-persona') f.personas.splice(+a.dataset.i, 1);
         else if (act === 'repartir') {
@@ -693,17 +728,35 @@
       }
     });
 
+    /** La devolución no crea un movimiento: rebaja la compra original. */
+    function guardarDevolucion(importe) {
+      var g = f.devol ? mov(f.devol) : null;
+      if (!g) return error(body, 'Elige la compra que te han devuelto.');
+      var resto = C.neto(g);
+      if (importe > resto + 0.005) return error(body, 'De esa compra solo quedan ' + fmt(resto) + ' por devolver.');
+      var g2 = clone(g);
+      g2.devuelto = C.r2(C.devuelto(g) + importe); g2.fechaDevuelto = f.fecha; g2.act = Date.now();
+      var ops = [{ op: 'mov', mov: g2 }];
+      if (f.id) ops.push({ op: 'borrar', id: f.id }); // un ingreso que se convierte en devolución
+      cerrarHoja(true); commit(ops);
+      toast('↩️ «' + (g.concepto || g.cat) + '» ahora te cuesta ' + fmt(C.neto(g2)));
+    }
     function guardar() {
       var importe = C.r2(C.num(f.importe));
       if (!(importe > 0)) return error(body, 'Escribe la cantidad.');
       if (!f.fecha) return error(body, 'Elige la fecha.');
       if (f.tipo === 'ingreso' && f.saldaOn && !f.salda) return error(body, 'Elige quién te ha pagado.');
+      if (f.tipo === 'ingreso' && f.devolOn) return guardarDevolucion(importe);
       if (f.tipo !== 'transferencia' && !f.salda && !f.cat) return error(body, 'Elige una categoría.');
       var m2 = {
         id: f.id || C.uid(), fecha: f.fecha, tipo: f.tipo, importe: importe, cuenta: SANT, destino: '',
         cat: f.cat, sub: f.sub, concepto: (f.concepto || '').trim() || placeholderConcepto().replace(/^Ej\.: .*/, ''),
-        miParte: '', pagaDeuda: '', previsto: f.previsto || '', prevImporte: f.prevImporte, act: Date.now()
+        miParte: '', pagaDeuda: '', previsto: f.previsto || '', prevImporte: f.prevImporte, devuelto: '', fechaDevuelto: '', act: Date.now()
       };
+      if (f.tipo === 'gasto' && C.num(f.devuelto) > 0) {
+        m2.devuelto = C.r2(C.num(f.devuelto)); m2.fechaDevuelto = f.fechaDevuelto || f.fecha;
+        if (m2.devuelto > importe) return error(body, 'Lo devuelto no puede ser más que lo que pagaste.');
+      }
       if (!m2.concepto) m2.concepto = f.sub || f.cat;
       var ops = [];
       if (f.tipo === 'transferencia') {
@@ -735,6 +788,45 @@
         if (ah) setTimeout(function () { abrirMarcar(ah, '¿Transfieres ya el ahorro a Trade Republic?'); }, 400);
       }
     }
+  }
+
+  // ---------- Calculadora para sumar varias cantidades ----------
+  function abrirCalc(titulo, inicial, alUsar) {
+    if (document.activeElement) document.activeElement.blur();
+    var expr = inicial ? String(inicial).replace(/\./g, ',') : '';
+    var ov = document.createElement('div');
+    ov.className = 'calc-ov';
+    ov.innerHTML = '<div class="calc" role="dialog" aria-modal="true" aria-label="Calculadora: ' + esc(titulo) + '">' +
+      '<div class="calc-head"><b>' + esc(titulo) + '</b><button class="link" data-k="cerrar">Cancelar</button></div>' +
+      '<div class="calc-expr" aria-live="polite"></div><div class="calc-total amt"></div><div class="calc-keys">' +
+      ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '−', 'C', '0', ',', 'ok'].map(function (k) {
+        return '<button data-k="' + k + '" class="' + (k === 'ok' ? 'ok' : /[+−⌫C]/.test(k) ? 'op' : '') + '">' + (k === 'ok' ? 'Usar' : k) + '</button>';
+      }).join('') + '</div></div>';
+    document.body.appendChild(ov);
+    function total() {
+      var t = 0, partes = expr.match(/[+−]?[^+−]+/g) || [];
+      partes.forEach(function (p) { var neg = p.charAt(0) === '−'; var n = C.num(p.replace(/^[+−]/, '')); t += neg ? -n : n; });
+      return C.r2(t);
+    }
+    function pintar() {
+      $('.calc-expr', ov).textContent = expr ? expr.replace(/([+−])/g, ' $1 ') : 'Suma las cantidades con +';
+      $('.calc-total', ov).textContent = fmt(total());
+    }
+    function cerrar() { ov.remove(); }
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) { cerrar(); return; }
+      var b = e.target.closest('[data-k]'); if (!b) return;
+      var k = b.dataset.k, ult = expr.slice(-1);
+      if (k === 'cerrar') return cerrar();
+      if (k === 'ok') { var t = total(); if (t < 0) return; cerrar(); alUsar(t); return; }
+      if (k === 'C') expr = '';
+      else if (k === '⌫') expr = expr.slice(0, -1);
+      else if (k === '+' || k === '−') { if (!expr || /[+−,]/.test(ult)) { if (expr && /[+−]/.test(ult)) expr = expr.slice(0, -1) + k; } else expr += k; }
+      else if (k === ',') { var trozo = expr.split(/[+−]/).pop(); if (trozo.indexOf(',') < 0) expr += (trozo ? '' : '0') + ','; }
+      else { var tr = expr.split(/[+−]/).pop(), dec = tr.split(',')[1]; if (!(dec && dec.length >= 2)) expr += k; }
+      pintar();
+    });
+    pintar();
   }
 
   function confirmarBorrado(f) {
@@ -1002,7 +1094,7 @@
   // ---------- Meses anteriores ----------
   function abrirMes(mes) {
     var t = hoy(), r = C.resumenMes(V, mes), ls = C.prevision(V, mes, t), prev = 0, real = 0;
-    ls.forEach(function (l) { prev += l.importe; if (l.hecho) real += C.num(l.hecho.importe); });
+    ls.forEach(function (l) { prev += l.importe; if (l.hecho) real += C.neto(l.hecho); });
     var a = C.ahorroMes(V, mes, t);
     abrirHoja({
       titulo: nombreMes(mes, true), html:
@@ -1012,7 +1104,7 @@
         '<div class="tile"><div class="k">Ahorro</div><div class="v amt">' + fmt(r.ahorro) + '</div></div>' +
         '<div class="tile"><div class="k">Ahorro cumplido</div><div class="v">' + (a.estado === 'si' ? '✓ Sí' : a.estado === 'no' ? '✗ No' : 'Pendiente') + '</div></div></div></div>' +
         '<div class="card"><h3>Previsto frente a real</h3><table class="data">' + ls.map(function (l) {
-          return '<tr><td>' + esc(l.concepto) + '<br><span class="small mut">previsto ' + fmt(l.importe) + '</span></td><td class="amt">' + (l.hecho ? fmt(l.hecho.importe) : '<span class="mut">sin marcar</span>') + '</td></tr>';
+          return '<tr><td>' + esc(l.concepto) + '<br><span class="small mut">previsto ' + fmt(l.importe) + '</span></td><td class="amt">' + (l.hecho ? fmt(C.neto(l.hecho)) : '<span class="mut">sin marcar</span>') + '</td></tr>';
         }).join('') +
         '<tr><td><b>Total</b><br><span class="small mut">previsto ' + fmt(prev) + '</span></td><td class="amt"><b>' + fmt(real) + '</b></td></tr>' +
         '<tr><td>Gastos fuera de la previsión</td><td class="amt">' + fmt(r.fueraPrevision) + '</td></tr></table><div style="height:6px"></div></div>' +

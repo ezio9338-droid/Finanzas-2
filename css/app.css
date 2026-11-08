@@ -253,6 +253,20 @@ table.data td:last-child { text-align: right; white-space: nowrap; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @media (min-width: 700px) { .overlay { align-items: center; } .sheet { border-radius: 22px; } }
 
+/* ---------- Calculadora ---------- */
+.calcbtn { border: 0; background: var(--acc-soft); border-radius: 9px; width: 34px; height: 30px; flex: none; font-size: 16px; padding: 0; }
+.calc-ov { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, .3); display: flex; align-items: flex-end; justify-content: center; animation: fade .15s; }
+.calc { width: 100%; max-width: 560px; background: var(--card); border-radius: 22px 22px 0 0; padding: 14px 16px calc(env(safe-area-inset-bottom) + 16px); animation: up .2s ease-out; display: flex; flex-direction: column; gap: 6px; }
+.calc-head { display: flex; justify-content: space-between; align-items: center; font-size: 17px; }
+.calc-expr { min-height: 22px; color: var(--muted); font-size: 16px; text-align: right; word-break: break-all; font-variant-numeric: tabular-nums; }
+.calc-total { font-size: 34px; font-weight: 700; text-align: right; letter-spacing: -.02em; }
+.calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+.calc-keys button { border: 0; background: var(--field); border-radius: 14px; height: 52px; font-size: 22px; }
+.calc-keys button:active { background: var(--track); }
+.calc-keys button.op { background: var(--acc-soft); color: var(--acc-ink); font-weight: 600; }
+.calc-keys button.ok { background: var(--acc); color: #fff; font-size: 17px; font-weight: 700; }
+@media (min-width: 700px) { .calc-ov { align-items: center; } .calc { border-radius: 22px; } }
+
 /* ---------- Bienvenida y bloqueo ---------- */
 .welcome { min-height: 100vh; min-height: 100dvh; justify-content: center; text-align: center; padding-bottom: calc(env(safe-area-inset-bottom) + 30px); }
 .welcome .logo { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); margin: 0 auto; display: block; }
