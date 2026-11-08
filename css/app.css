@@ -42,6 +42,8 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; min-height: 100%; }
+/* Sin zoom por doble toque: la app no lo necesita y los toques responden antes */
+html, body, button, a, input, select, textarea, label, summary, .item { touch-action: manipulation; }
 body { background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.4; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }

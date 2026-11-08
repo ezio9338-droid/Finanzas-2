@@ -1281,6 +1281,9 @@
     if (e.key === 'Enter' && (e.target.tagName || '').toLowerCase() === 'input' && !e.target.closest('.person') && hoja._o && hoja._o.onGuardar) { e.preventDefault(); e.target.blur(); hoja._o.onGuardar(); }
   });
 
+  // Sin zoom: Safari ignora user-scalable=no, así que se bloquean los gestos de pellizco.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+
   var ocultoDesde = 0;
   document.addEventListener('visibilitychange', function () {
     document.body.classList.toggle('oculto', document.hidden && modo() === 'online');
