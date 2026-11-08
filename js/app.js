@@ -631,15 +631,15 @@
       }
       h += '<div class="field">' +
         (f.devolOn ? '' : '<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(f.concepto) + '" placeholder="' + esc(placeholderConcepto()) + '" maxlength="120" enterkeyhint="done"></div>') +
-        '<div class="frow"><span class="k">Cantidad</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.importe) + '" enterkeyhint="done"></div>' +
+        '<div class="frow"><span class="k">Cantidad</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.importe) + '" enterkeyhint="done"><button class="calcbtn" data-act="calc" data-t="importe" aria-label="Calculadora para la cantidad">🧮</button></div>' +
         '<div class="frow"><span class="k">Fecha</span><input type="date" data-f="fecha" value="' + esc(f.fecha) + '"></div></div>';
       if (f.tipo === 'gasto') {
         h += '<div class="field"><div class="frow"><span>Compartido</span>' + sw(f.compartido, 'toggle-comp') + '</div>';
         if (f.compartido) {
-          h += '<div class="frow"><span class="k">Mi parte</span><input class="amt" data-f="miParte" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.miParte) + '"></div>';
+          h += '<div class="frow"><span class="k">Mi parte</span><input class="amt" data-f="miParte" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.miParte) + '"><button class="calcbtn" data-act="calc" data-t="miParte" aria-label="Calculadora para mi parte">🧮</button></div>';
           f.personas.forEach(function (p, i) {
             h += '<div class="person"><span>👤</span><input class="name" data-p="' + i + '" data-pk="nombre" list="dl-personas" placeholder="Nombre" value="' + esc(p.nombre) + '" maxlength="40" autocapitalize="words">' +
-              '<input class="imp amt" data-p="' + i + '" data-pk="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(p.importe) + '"><button class="x" data-act="quitar-persona" data-i="' + i + '" aria-label="Quitar">✕</button></div>';
+              '<input class="imp amt" data-p="' + i + '" data-pk="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(p.importe) + '"><button class="calcbtn" data-act="calc" data-t="p' + i + '" aria-label="Calculadora para ' + esc(p.nombre || 'esta persona') + '">🧮</button><button class="x" data-act="quitar-persona" data-i="' + i + '" aria-label="Quitar">✕</button></div>';
           });
           h += '<div class="frow"><button class="link" data-act="add-persona">＋ Añadir persona</button><button class="link" data-act="repartir">Repartir a partes iguales</button></div>';
         }
@@ -705,6 +705,15 @@
         else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else { f.saldaOn = true; f.devolOn = false; f.devol = ''; } }
         else if (act === 'toggle-devol') { f.devolOn = !f.devolOn; f.devol = ''; if (f.devolOn) { f.salda = ''; f.saldaOn = false; } }
         else if (act === 'nueva-devol') { var orig = mov(f.id); if (orig) { cerrarHoja(); abrirMovimiento(null, { tipo: 'ingreso', devolOn: true, devol: orig.id, importe: aInput(C.neto(orig)) }); } return; }
+        else if (act === 'calc') {
+          var tg = a.dataset.t, esP = tg.charAt(0) === 'p', pi = esP ? +tg.slice(1) : -1;
+          var titulo = tg === 'importe' ? 'Cantidad' : tg === 'miParte' ? 'Mi parte' : 'Debe ' + (f.personas[pi].nombre.trim() || 'esta persona');
+          abrirCalc(titulo, esP ? f.personas[pi].importe : f[tg], function (total) {
+            if (esP) f.personas[pi].importe = aInput(total); else f[tg] = aInput(total);
+            repintar(body, pintar());
+          });
+          return;
+        }
         else if (act === 'add-persona') f.personas.push({ nombre: '', importe: '' });
         else if (act === 'quitar-persona') f.personas.splice(+a.dataset.i, 1);
         else if (act === 'repartir') {
@@ -779,6 +788,45 @@
         if (ah) setTimeout(function () { abrirMarcar(ah, '¿Transfieres ya el ahorro a Trade Republic?'); }, 400);
       }
     }
+  }
+
+  // ---------- Calculadora para sumar varias cantidades ----------
+  function abrirCalc(titulo, inicial, alUsar) {
+    if (document.activeElement) document.activeElement.blur();
+    var expr = inicial ? String(inicial).replace(/\./g, ',') : '';
+    var ov = document.createElement('div');
+    ov.className = 'calc-ov';
+    ov.innerHTML = '<div class="calc" role="dialog" aria-modal="true" aria-label="Calculadora: ' + esc(titulo) + '">' +
+      '<div class="calc-head"><b>' + esc(titulo) + '</b><button class="link" data-k="cerrar">Cancelar</button></div>' +
+      '<div class="calc-expr" aria-live="polite"></div><div class="calc-total amt"></div><div class="calc-keys">' +
+      ['7', '8', '9', '⌫', '4', '5', '6', '+', '1', '2', '3', '−', 'C', '0', ',', 'ok'].map(function (k) {
+        return '<button data-k="' + k + '" class="' + (k === 'ok' ? 'ok' : /[+−⌫C]/.test(k) ? 'op' : '') + '">' + (k === 'ok' ? 'Usar' : k) + '</button>';
+      }).join('') + '</div></div>';
+    document.body.appendChild(ov);
+    function total() {
+      var t = 0, partes = expr.match(/[+−]?[^+−]+/g) || [];
+      partes.forEach(function (p) { var neg = p.charAt(0) === '−'; var n = C.num(p.replace(/^[+−]/, '')); t += neg ? -n : n; });
+      return C.r2(t);
+    }
+    function pintar() {
+      $('.calc-expr', ov).textContent = expr ? expr.replace(/([+−])/g, ' $1 ') : 'Suma las cantidades con +';
+      $('.calc-total', ov).textContent = fmt(total());
+    }
+    function cerrar() { ov.remove(); }
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) { cerrar(); return; }
+      var b = e.target.closest('[data-k]'); if (!b) return;
+      var k = b.dataset.k, ult = expr.slice(-1);
+      if (k === 'cerrar') return cerrar();
+      if (k === 'ok') { var t = total(); if (t < 0) return; cerrar(); alUsar(t); return; }
+      if (k === 'C') expr = '';
+      else if (k === '⌫') expr = expr.slice(0, -1);
+      else if (k === '+' || k === '−') { if (!expr || /[+−,]/.test(ult)) { if (expr && /[+−]/.test(ult)) expr = expr.slice(0, -1) + k; } else expr += k; }
+      else if (k === ',') { var trozo = expr.split(/[+−]/).pop(); if (trozo.indexOf(',') < 0) expr += (trozo ? '' : '0') + ','; }
+      else { var tr = expr.split(/[+−]/).pop(), dec = tr.split(',')[1]; if (!(dec && dec.length >= 2)) expr += k; }
+      pintar();
+    });
+    pintar();
   }
 
   function confirmarBorrado(f) {

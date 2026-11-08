@@ -83,7 +83,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 | Quiero… | Cómo |
 |---|---|
 | Apuntar un gasto | **＋** → categoría → concepto, cantidad y fecha → **Guardar**. |
-| Una cena que me pagarán | En el gasto, activa **Compartido**, pon **tu parte** y quién te debe el resto (**Repartir a partes iguales** lo calcula). |
+| Una cena que me pagarán | En el gasto, activa **Compartido**, pon **tu parte** y quién te debe el resto (**Repartir a partes iguales** lo calcula). | Si una parte son varias cantidades, pulsa 🧮 junto a la cifra y súmalas.
 | Registrar un Bizum que salda una deuda | **＋ → Ingreso → Salda una deuda** y elige la persona. O en **Deudas**, toca la persona → **Registrar un pago**. |
 | Me devuelven una compra | **＋ → Ingreso → Es una devolución**, busca la compra y pon lo que te devuelven. No se crea un movimiento nuevo: la compra original pasa a costar lo neto (en su mes) y el saldo sube el día de la devolución. También desde la compra: tócala → **Registrar una devolución**. |
 | Cobrar la nómina | **＋ → Ingreso → Nómina**. Después la app ofrece marcar el ahorro del mes. |
