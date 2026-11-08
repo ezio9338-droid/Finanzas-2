@@ -54,12 +54,19 @@ var HuchaCore = (function () {
 
   // ---------- Movimientos ----------
   /** Lo que de verdad te ha costado un gasto (tu parte si es compartido). */
-  function parteMia(m) { return m.miParte !== '' && m.miParte != null ? num(m.miParte) : num(m.importe); }
+  function parteMia(m) {
+    var base = m.miParte !== '' && m.miParte != null ? num(m.miParte) : num(m.importe);
+    return r2(Math.max(0, base - devuelto(m)));
+  }
+  /** Lo que te han devuelto de una compra (devoluciones). */
+  function devuelto(m) { return m.tipo === 'gasto' ? num(m.devuelto) : 0; }
+  /** Importe neto de un movimiento: en un gasto, lo pagado menos lo devuelto. */
+  function neto(m) { return r2(num(m.importe) - devuelto(m)); }
 
-  /** Efecto de un movimiento en el saldo de una cuenta. */
+  /** Efecto neto de un movimiento en una cuenta (una compra devuelta cuenta por lo que te costó). */
   function efecto(m, cuenta) {
     var imp = num(m.importe);
-    if (m.tipo === 'gasto') return m.cuenta === cuenta ? -imp : 0;
+    if (m.tipo === 'gasto') return m.cuenta === cuenta ? -(imp - devuelto(m)) : 0;
     if (m.tipo === 'ingreso') return m.cuenta === cuenta ? imp : 0;
     if (m.tipo === 'transferencia') return (m.cuenta === cuenta ? -imp : 0) + (m.destino === cuenta ? imp : 0);
     return 0;
@@ -76,9 +83,15 @@ var HuchaCore = (function () {
     var movs = st.movimientos || [];
     for (var i = 0; i < movs.length; i++) {
       var m = movs[i];
+      var dev = devuelto(m);
+      if (dev && m.cuenta === cuenta) {
+        // La compra resta el día que se pagó y la devolución suma el día que llegó.
+        var fd = m.fechaDevuelto || m.fecha;
+        if ((!hasta || fd <= hasta) && (!desde || fd >= desde)) s += dev;
+      }
       if (hasta && m.fecha > hasta) continue;
       if (desde && m.fecha < desde) continue;
-      s += efecto(m, cuenta);
+      s += m.tipo === 'gasto' ? (m.cuenta === cuenta ? -num(m.importe) : 0) : efecto(m, cuenta);
     }
     if (cuenta === TRADE) {
       (st.ahorro || []).forEach(function (a) {
@@ -105,7 +118,7 @@ var HuchaCore = (function () {
       ['Suscripciones', '📱', 'gasto', ['iCloud', 'Streaming', 'Música', 'Apps']],
       ['Gastos personales', '💅', 'gasto', ['Uñas', 'Depilación', 'Peluquería', 'Ropa', 'Cosmética', 'Regalos']],
       ['Nómina', '💼', 'ingreso', ['Nómina', 'Paga extra']],
-      ['Otros ingresos', '💶', 'ingreso', ['Devoluciones', 'Otros']],
+      ['Otros ingresos', '💶', 'ingreso', ['Otros']],
       ['Ahorro', '🐷', 'ahorro', ['Trade Republic']]
     ];
     var out = [];
@@ -400,7 +413,7 @@ var HuchaCore = (function () {
     pad: pad, toISO: toISO, parseISO: parseISO, addDays: addDays, diffDays: diffDays, mesDe: mesDe, mesSig: mesSig, mesAnt: mesAnt,
     finDeMes: finDeMes, rangoMeses: rangoMeses, nombreMes: nombreMes,
     r2: r2, num: num, fmt: fmt, uid: uid, cfg: cfg,
-    parteMia: parteMia, efecto: efecto, saldo: saldo,
+    parteMia: parteMia, devuelto: devuelto, neto: neto, efecto: efecto, saldo: saldo,
     categoriasBase: categoriasBase, icono: icono,
     ocurrencias: ocurrencias, prevision: prevision, resumenPrevision: resumenPrevision, objetivoMes: objetivoMes,
     deudas: deudas, totalMeDeben: totalMeDeben, personasConocidas: personasConocidas, clavePersona: clavePersona,
