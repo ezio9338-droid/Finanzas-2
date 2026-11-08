@@ -163,14 +163,17 @@ var HuchaCore = (function () {
    */
   function prevision(st, mes, hoy) {
     var h = hechos(st), out = [];
+    // El ahorro solo aparece cuando ya se ha apuntado la nómina del mes (o si ya está hecho).
+    var hayNomina = (st.movimientos || []).some(function (m) { return m.tipo === 'ingreso' && m.cat === 'Nómina' && mesDe(m.fecha) === mes; });
     (st.fijos || []).slice().sort(function (a, b) { return (+a.orden || 0) - (+b.orden || 0); }).forEach(function (f) {
       ocurrencias(f, mes).forEach(function (o) {
         var esAhorro = f.tipo === 'ahorro', hecho = h[o.clave] || null;
+        if (esAhorro && !hecho && !hayNomina) return;
         out.push({
           clave: o.clave, origen: 'fijo', ref: f, icono: f.icono || '', concepto: esAhorro ? 'Ahorro ' + nombreMes(mes) : f.concepto,
           importe: esAhorro ? objetivoMes(st, mes) : num(f.importe), cat: esAhorro ? 'Ahorro' : f.cat, sub: esAhorro ? 'Trade Republic' : f.sub,
           fecha: o.fecha, esAhorro: esAhorro, hecho: hecho,
-          retrasado: !hecho && !!o.fecha && !!hoy && diffDays(o.fecha, hoy) >= 2
+          retrasado: !esAhorro && !hecho && !!o.fecha && !!hoy && diffDays(o.fecha, hoy) >= 2
         });
       });
     });

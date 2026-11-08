@@ -92,7 +92,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 | Confirmar los intereses | En **Ahorro**, a partir del día 1, activa el interruptor del mes anterior y corrige el importe si no coincide. |
 | Verificar el ahorro de un mes | En **Ahorro**, en el mes correspondiente: **✓ Cumplido** o **✗ No**. |
 | Cambiar el objetivo de ahorro | En **Ahorro**, toca la cifra «aportado / objetivo» del mes. |
-| Gastos fijos y categorías | **Más → Gastos fijos** y **Más → Categorías**. |
+| Gastos fijos y categorías | **Más → Gastos fijos** (cada fijo puede tener su propio emoji) y **Más → Categorías**. |
 | Buscar movimientos antiguos | **Santander → Ver todos**: busca por concepto y filtra por fechas. |
 
 ### Cómo se calcula
@@ -100,7 +100,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 ```
 Saldo Santander = saldo inicial + ingresos − gastos ± transferencias
 Te quedaría     = saldo Santander − (fijos del mes sin marcar + partidas sin marcar)
-                  (el ahorro a Trade Republic no se resta: solo está para marcarlo)
+                  (el ahorro a Trade Republic no se resta: aparece al apuntar la nómina, para marcarlo)
 Trade Republic  = saldo inicial + aportaciones − retiradas + intereses confirmados
 ```
 

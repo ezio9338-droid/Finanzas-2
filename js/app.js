@@ -915,7 +915,7 @@
           (s.cat && subs(s.cat).length ? '<div class="frow"><span class="k">Subcategoría</span><select data-f="sub">' + opcionesSub(s.cat, s.sub) + '</select></div>' : '');
       }
       h += '</div>';
-      if (s.tipo === 'ahorro') h += '<p class="hint">El importe es el objetivo de cada mes (' + fmt(C.objetivoMes(V, C.mesDe(hoy()))) + ' este mes). Se cambia en Ahorro, tocando la cifra del mes.</p>';
+      if (s.tipo === 'ahorro') h += '<p class="hint">El importe es el objetivo de cada mes (' + fmt(C.objetivoMes(V, C.mesDe(hoy()))) + ' este mes). Se cambia en Ahorro, tocando la cifra del mes. Aparece en la previsión cuando apuntas la nómina.</p>';
       h += '<div class="seg">' + [['mensual', 'Día del mes'], ['dias', 'Cada X días'], ['sin', 'Sin día fijo']].map(function (o) {
         return '<button class="' + (s.frecuencia === o[0] ? 'on' : '') + '" data-set="frecuencia" data-v="' + o[0] + '">' + o[1] + '</button>';
       }).join('') + '</div><div class="field">';
