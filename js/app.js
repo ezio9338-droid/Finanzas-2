@@ -140,6 +140,12 @@
   function subs(cat) { return (V.categorias || []).filter(function (c) { return c.cat === cat && c.sub; }).map(function (c) { return c.sub; }); }
   function icono(cat) { return C.icono(V, cat); }
   function mov(id) { return V.movimientos.filter(function (m) { return m.id === id; })[0]; }
+  /** Emoji propio del gasto fijo del que viene un movimiento (o '' si no tiene). */
+  function iconoFijo(m) {
+    if (!m.previsto || m.previsto.indexOf('fijo:') !== 0) return '';
+    var id = m.previsto.split(':')[1], f = (V.fijos || []).filter(function (x) { return x.id === id; })[0];
+    return f && f.icono ? f.icono : '';
+  }
   function lineaPrev(clave) {
     var mes = clave.indexOf('fijo:') === 0 ? clave.split(':')[2].slice(0, 7) : C.mesDe(hoy());
     return C.prevision(V, mes, hoy()).filter(function (l) { return l.clave === clave; })[0];
@@ -235,7 +241,7 @@
     var emo, cls = '', titulo, sub = [fCorta(m.fecha)], imp, signo;
     if (m.tipo === 'transferencia') {
       var aTR = m.destino === TRADE;
-      emo = '<div class="emo tr">🐷</div>'; titulo = m.concepto || (aTR ? 'Ahorro' : 'Desde Trade Republic');
+      emo = '<div class="emo tr">' + esc(iconoFijo(m) || '🐷') + '</div>'; titulo = m.concepto || (aTR ? 'Ahorro' : 'Desde Trade Republic');
       sub.push(aTR ? 'A Trade Republic' : 'De Trade Republic a Santander');
       imp = (aTR ? '−' : '+') + fmt(m.importe); cls = aTR ? '' : 'pos';
     } else if (m.tipo === 'ingreso') {
@@ -244,7 +250,7 @@
       sub.push(m.pagaDeuda ? 'Salda deuda de ' + esc(m.pagaDeuda) : esc(m.cat + (m.sub && m.sub !== m.cat ? ' › ' + m.sub : '')));
       imp = '+' + fmt(m.importe); cls = 'pos';
     } else {
-      emo = '<div class="emo">' + icono(m.cat) + '</div>'; titulo = m.concepto || m.sub || m.cat || 'Gasto';
+      emo = '<div class="emo">' + esc(iconoFijo(m) || icono(m.cat)) + '</div>'; titulo = m.concepto || m.sub || m.cat || 'Gasto';
       sub.push(esc(m.cat + (m.sub ? ' › ' + m.sub : '')));
       if (m.miParte !== '' && m.miParte != null) sub.push('tu parte ' + fmt(m.miParte));
       var dev = C.devuelto(m);
