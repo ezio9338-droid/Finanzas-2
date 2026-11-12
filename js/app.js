@@ -150,6 +150,7 @@
     var mes = clave.indexOf('fijo:') === 0 ? clave.split(':')[2].slice(0, 7) : C.mesDe(hoy());
     return C.prevision(V, mes, hoy()).filter(function (l) { return l.clave === clave; })[0];
   }
+  /** Más reciente primero; el mismo día, por orden de creación (editar no lo sube arriba). */
   function ordenMovs(a, b) { return a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (b.act || 0) - (a.act || 0); }
 
   // ---------------------------------------------------------------- render
@@ -742,7 +743,7 @@
       var resto = C.neto(g);
       if (importe > resto + 0.005) return error(body, 'De esa compra solo quedan ' + fmt(resto) + ' por devolver.');
       var g2 = clone(g);
-      g2.devuelto = C.r2(C.devuelto(g) + importe); g2.fechaDevuelto = f.fecha; g2.act = Date.now();
+      g2.devuelto = C.r2(C.devuelto(g) + importe); g2.fechaDevuelto = f.fecha;
       var ops = [{ op: 'mov', mov: g2 }];
       if (f.id) ops.push({ op: 'borrar', id: f.id }); // un ingreso que se convierte en devolución
       cerrarHoja(true); commit(ops);
@@ -758,7 +759,8 @@
       var m2 = {
         id: f.id || C.uid(), fecha: f.fecha, tipo: f.tipo, importe: importe, cuenta: SANT, destino: '',
         cat: f.cat, sub: f.sub, concepto: (f.concepto || '').trim() || placeholderConcepto().replace(/^Ej\.: .*/, ''),
-        miParte: '', pagaDeuda: '', previsto: f.previsto || '', prevImporte: f.prevImporte, devuelto: '', fechaDevuelto: '', act: Date.now()
+        miParte: '', pagaDeuda: '', previsto: f.previsto || '', prevImporte: f.prevImporte, devuelto: '', fechaDevuelto: '',
+        act: f.id && mov(f.id) ? +mov(f.id).act || 0 : Date.now() // al editar, conserva su sitio en la lista
       };
       if (f.tipo === 'gasto' && C.num(f.devuelto) > 0) {
         m2.devuelto = C.r2(C.num(f.devuelto)); m2.fechaDevuelto = f.fechaDevuelto || f.fecha;
