@@ -55,6 +55,8 @@ En el editor de Apps Script:
    - `saldoInicialSantander`: el saldo de la cuenta Santander.
    - `saldoInicialTrade`: el saldo de Trade Republic.
    - `fechaSaldo`: la fecha de esos saldos (por defecto, el día de la instalación). Los movimientos anteriores a esa fecha cuentan en la previsión y en las estadísticas, pero no cambian el saldo, porque ya estaban incluidos.
+
+> **Si Trade Republic cambia la TAE**, no toques `tae1`/`tae2`: rellena en `Config` `fechaCambioTae` (el primer día con el nuevo tipo) y `tae1Nueva` (y, si cambian, `tae2Nueva` y `limiteTaeNuevo`). Los días anteriores se siguen calculando con el tipo antiguo y los posteriores con el nuevo, aunque el cambio caiga a mitad de mes. Si no ves esas filas, añádelas a mano (clave y valor) o vuelve a ejecutar `instalar`, que solo añade las claves que falten.
 5. Para ver la **clave secreta**, abre el menú **Hucha → Ver clave secreta** de la hoja. Si no aparece el menú, recarga la hoja.
 
 ### 5. Publica la API

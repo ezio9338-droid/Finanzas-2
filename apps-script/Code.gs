@@ -69,9 +69,13 @@ var DESC_CONFIG = {
   tae1: 'TAE % de Trade Republic hasta el límite',
   tae2: 'TAE % de Trade Republic por encima del límite',
   limiteTae: 'Límite del primer tramo de TAE (€)',
-  retencion: 'Retención sobre los intereses (%)'
+  retencion: 'Retención sobre los intereses (%)',
+  fechaCambioTae: 'Fecha desde la que cambia la TAE (vacío: sin cambio). Los días anteriores usan tae1/tae2',
+  tae1Nueva: 'Nueva TAE % hasta el límite, desde la fecha del cambio (vacío: igual que tae1)',
+  tae2Nueva: 'Nueva TAE % por encima del límite, desde la fecha del cambio (vacío: igual que tae2)',
+  limiteTaeNuevo: 'Nuevo límite del primer tramo (€), desde la fecha del cambio (vacío: igual que limiteTae)'
 };
-var NUM_CONFIG = ['saldoInicialSantander', 'saldoInicialTrade', 'objetivoAhorro', 'tae1', 'tae2', 'limiteTae', 'retencion'];
+var NUM_CONFIG = ['saldoInicialSantander', 'saldoInicialTrade', 'objetivoAhorro', 'tae1', 'tae2', 'limiteTae', 'retencion', 'tae1Nueva', 'tae2Nueva', 'limiteTaeNuevo'];
 
 // ---------------------------------------------------------------- Instalación
 
@@ -119,7 +123,8 @@ function plantilla(hoy) {
   return {
     config: {
       fechaInicio: mes + '-01', fechaSaldo: hoy, saldoInicialSantander: 0, saldoInicialTrade: 0,
-      objetivoAhorro: 1450, tae1: 3, tae2: 2.25, limiteTae: 50000, retencion: 19
+      objetivoAhorro: 1450, tae1: 3, tae2: 2.25, limiteTae: 50000, retencion: 19,
+      fechaCambioTae: '', tae1Nueva: '', tae2Nueva: '', limiteTaeNuevo: ''
     },
     categorias: HuchaCore.categoriasBase(),
     fijos: [
@@ -387,7 +392,7 @@ function leerEstado() {
   var cfg = {};
   leerHoja('Config').forEach(function (r) { if (r.clave) cfg[r.clave] = r.valor instanceof Date ? aISO(r.valor) : r.valor; });
   NUM_CONFIG.forEach(function (k) { if (cfg[k] !== undefined && cfg[k] !== '') cfg[k] = HuchaCore.num(cfg[k]); });
-  ['fechaInicio', 'fechaSaldo'].forEach(function (k) { if (cfg[k]) cfg[k] = aISO(cfg[k]); });
+  ['fechaInicio', 'fechaSaldo', 'fechaCambioTae'].forEach(function (k) { if (cfg[k]) cfg[k] = aISO(cfg[k]); });
   var texto = function (v) { return v === null || v === undefined ? '' : String(v); };
   var movs = leerHoja('Movimientos').map(function (m) {
     m.id = texto(m.id); m.tipo = texto(m.tipo).toLowerCase(); m.cuenta = texto(m.cuenta).toLowerCase(); m.destino = texto(m.destino).toLowerCase();
