@@ -253,20 +253,33 @@ var HuchaCore = (function () {
   function tasaDiaria(tae) { return Math.pow(1 + num(tae) / 100, 1 / 365) - 1; }
 
   /**
+   * Tramos de TAE vigentes en una fecha. Desde `fechaCambioTae` se usan `tae1Nueva`,
+   * `tae2Nueva` y `limiteTaeNuevo`; si alguno está vacío, se mantiene el valor anterior.
+   */
+  function tramosTae(st, fecha) {
+    var t = { t1: cfg(st, 'tae1', 3), t2: cfg(st, 'tae2', 2.25), lim: cfg(st, 'limiteTae', 50000) };
+    var cambio = cfg(st, 'fechaCambioTae', '');
+    if (cambio && fecha >= String(cambio).slice(0, 10)) {
+      t = { t1: cfg(st, 'tae1Nueva', t.t1), t2: cfg(st, 'tae2Nueva', t.t2), lim: cfg(st, 'limiteTaeNuevo', t.lim) };
+    }
+    return { t1: tasaDiaria(t.t1), t2: tasaDiaria(t.t2), lim: num(t.lim) };
+  }
+
+  /**
    * Intereses netos estimados de un mes (se pagan el día 1 del siguiente).
-   * TAE por tramos: tae1 hasta `limiteTae`, tae2 por encima. Se descuenta la retención.
-   * Si el mes no ha terminado, calcula hasta ayer. Devuelve null si el mes aún no ha empezado.
+   * TAE por tramos: tae1 hasta `limiteTae`, tae2 por encima (con el cambio de `fechaCambioTae`).
+   * Se descuenta la retención. Si el mes no ha terminado, calcula hasta ayer.
+   * Devuelve null si el mes aún no ha empezado.
    */
   function interesEstimado(st, mes, hoy) {
     var ini = mes + '-01', fin = finDeMes(mes);
     if (hoy && ini >= hoy) return null;
     var hasta = hoy && hoy <= fin ? addDays(hoy, -1) : fin;
-    var t1 = tasaDiaria(cfg(st, 'tae1', 3)), t2 = tasaDiaria(cfg(st, 'tae2', 2.25));
-    var lim = num(cfg(st, 'limiteTae', 50000)), ret = num(cfg(st, 'retencion', 19));
+    var ret = num(cfg(st, 'retencion', 19));
     var total = 0;
     for (var d = ini, i = 0; d <= hasta && i < 31; d = addDays(d, 1), i++) {
       var b = saldo(st, TRADE, d);
-      if (b > 0) total += Math.min(b, lim) * t1 + Math.max(0, b - lim) * t2;
+      if (b > 0) { var t = tramosTae(st, d); total += Math.min(b, t.lim) * t.t1 + Math.max(0, b - t.lim) * t.t2; }
     }
     return r2(total * (1 - ret / 100));
   }
