@@ -1132,6 +1132,20 @@
       '<button class="link" data-act="reconectar">¿No puedes entrar? Reconectar desde cero</button></div>';
   }
 
+  /** Mensaje especial solo el 17 de noviembre de 2026: sale cada vez que se entra con Face ID. */
+  var DIA_ESPECIAL = '2026-11-17';
+  function mensajeDia() {
+    if (hoy() !== DIA_ESPECIAL || $('.amor-ov')) return;
+    var ov = document.createElement('div');
+    ov.className = 'amor-ov';
+    ov.innerHTML = '<div class="amor" role="dialog" aria-modal="true" aria-label="Mensaje especial">' +
+      '<div class="amor-corazones" aria-hidden="true"><span>💜</span><span>💗</span><span>💜</span><span>💗</span><span>💜</span></div>' +
+      '<div class="amor-emo" aria-hidden="true">💜</div><h2>¡Te quiero pesiosa!</h2>' +
+      '<button class="btn primary block" data-k="cerrar">Entrar</button></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) { if (e.target === ov || e.target.closest('[data-k]')) ov.remove(); });
+  }
+
   var abriendo = false;
   function desbloquear(silencioso) {
     if (abriendo || !caja) return;
@@ -1140,7 +1154,7 @@
     HuchaVault.abrir(caja, pass, function () { return DB.get('llaveLocal'); }).then(function (k) {
       return HuchaVault.descifrar(k, caja).then(function (d) {
         llave = k; sesion = { url: d.url, clave: d.clave }; snapshot = d.snapshot; queue = d.queue || []; sync.ultimo = d.ultimoSync || 0;
-        recompute(); render(); hacerSync();
+        recompute(); render(); mensajeDia(); hacerSync();
       });
     }).catch(function (e) {
       var err = $('#l-err');
