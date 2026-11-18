@@ -279,24 +279,7 @@ table.data td:last-child { text-align: right; white-space: nowrap; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 12px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 90; animation: fade .2s; max-width: calc(100% - 32px); text-align: center; }
 
-/* Mensaje especial (17 de noviembre) */
-.amor-ov { position: fixed; inset: 0; z-index: 95; background: rgba(20, 14, 50, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade .2s; }
-.amor { position: relative; overflow: hidden; width: 100%; max-width: 340px; background: var(--card); border-radius: 26px; padding: 34px 22px 20px; text-align: center; box-shadow: 0 20px 50px rgba(60, 40, 160, .28); animation: amor-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
-.amor::before { content: ''; position: absolute; inset: 0 0 auto; height: 120px; background: linear-gradient(180deg, var(--acc-soft), transparent); pointer-events: none; }
-.amor-emo { position: relative; font-size: 64px; line-height: 1; animation: latido 1.4s ease-in-out infinite; }
-.amor .btn { position: relative; z-index: 1; }
-.amor h2 { position: relative; margin: 14px 0 22px; font-size: 26px; color: var(--acc-ink); }
-.amor-corazones span { position: absolute; bottom: -20px; font-size: 20px; opacity: 0; animation: sube 3.6s ease-in infinite; }
-.amor-corazones span:nth-child(1) { left: 10%; animation-delay: 0s; }
-.amor-corazones span:nth-child(2) { left: 28%; animation-delay: 1.2s; font-size: 15px; }
-.amor-corazones span:nth-child(3) { left: 50%; animation-delay: .5s; }
-.amor-corazones span:nth-child(4) { left: 70%; animation-delay: 1.8s; font-size: 15px; }
-.amor-corazones span:nth-child(5) { left: 86%; animation-delay: .9s; }
-@keyframes amor-pop { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes latido { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
-@keyframes sube { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: .8; } 100% { transform: translateY(-300px); opacity: 0; } }
-
 /* Privacidad: contenido difuminado en el selector de apps */
 body.oculto #app, body.oculto .overlay, body.oculto .tabbar { filter: blur(28px); }
 
-@media (prefers-reduced-motion: reduce) { .sw, .sw::after, .overlay, .sheet, .toast, .amor, .amor-emo, .amor-ov { transition: none; animation: none; } .amor-corazones { display: none; } }
+@media (prefers-reduced-motion: reduce) { .sw, .sw::after, .overlay, .sheet, .toast { transition: none; animation: none; } }
