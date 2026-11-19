@@ -643,12 +643,13 @@
       if (f.tipo === 'gasto') {
         h += '<div class="field"><div class="frow"><span>Compartido</span>' + sw(f.compartido, 'toggle-comp') + '</div>';
         if (f.compartido) {
-          h += '<div class="frow"><span class="k">Mi parte</span><input class="amt" data-f="miParte" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.miParte) + '"><button class="calcbtn" data-act="calc" data-t="miParte" aria-label="Calculadora para mi parte">🧮</button></div>';
+          h += '<div class="frow"><span class="k">Mi parte</span><b class="amt mia" data-mia>' + esc(textoMia()) + '</b></div>';
           f.personas.forEach(function (p, i) {
             h += '<div class="person"><span>👤</span><input class="name" data-p="' + i + '" data-pk="nombre" list="dl-personas" placeholder="Nombre" value="' + esc(p.nombre) + '" maxlength="40" autocapitalize="words">' +
               '<input class="imp amt" data-p="' + i + '" data-pk="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(p.importe) + '"><button class="calcbtn" data-act="calc" data-t="p' + i + '" aria-label="Calculadora para ' + esc(p.nombre || 'esta persona') + '">🧮</button><button class="x" data-act="quitar-persona" data-i="' + i + '" aria-label="Quitar">✕</button></div>';
           });
-          h += '<div class="frow"><button class="link" data-act="add-persona">＋ Añadir persona</button><button class="link" data-act="repartir">Repartir a partes iguales</button></div>';
+          h += '<div class="frow"><button class="link" data-act="add-persona">＋ Añadir persona</button><button class="link" data-act="repartir">Repartir a partes iguales</button></div>' +
+            '<p class="note">Tu parte se calcula sola: la cantidad menos lo que te debe cada persona.</p>';
         }
         h += '</div>';
         if (f.id && C.num(f.devuelto) > 0) {
@@ -676,15 +677,22 @@
       if (f.salda) return 'Bizum de ' + f.salda;
       return f.sub || f.cat || 'Ej.: Mercadona';
     }
+    /** Céntimos enteros, para que las sumas no arrastren errores de coma flotante. */
+    function cent(x) { return Math.round(C.num(x) * 100); }
+    function centOtros() { return f.personas.reduce(function (a, p) { return a + cent(p.importe); }, 0); }
+    /** Mi parte = la cantidad menos lo que te deben los demás (en céntimos exactos). */
+    function centMia() { return cent(f.importe) - centOtros(); }
+    function textoMia() { return f.importe === '' ? '—' : fmt(centMia() / 100); }
     function pista() {
-      if (f.tipo !== 'gasto' || !f.compartido) return '';
-      var imp = C.num(f.importe), mia = C.num(f.miParte), otros = f.personas.reduce(function (a, p) { return a + C.num(p.importe); }, 0);
-      var falta = C.r2(imp - mia - otros);
-      if (!imp) return '';
-      if (Math.abs(falta) < 0.005) return 'Te deben ' + fmt(otros) + ' en total.';
-      return falta > 0 ? 'Falta repartir ' + fmt(falta) + '.' : 'Te pasas en ' + fmt(-falta) + '.';
+      if (f.tipo !== 'gasto' || !f.compartido || !cent(f.importe)) return '';
+      var mia = centMia();
+      if (mia < 0) return 'Lo que te deben supera la cantidad en ' + fmt(-mia / 100) + '.';
+      return 'Te deben ' + fmt(centOtros() / 100) + ' en total.';
     }
-    function actualizarPista() { var p = $('[data-err]', body); if (p) { p.textContent = pista(); p.className = 'hint'; } }
+    function actualizarPista() {
+      var p = $('[data-err]', body); if (p) { p.textContent = pista(); p.className = centMia() < 0 && f.compartido ? 'hint bad' : 'hint'; }
+      var m = $('[data-mia]', body); if (m) { m.textContent = textoMia(); m.classList.toggle('neg', f.compartido && centMia() < 0); }
+    }
 
     var body = abrirHoja({
       titulo: f.id ? 'Editar' : 'Nuevo', guardar: 'Guardar', html: pintar(),
@@ -725,10 +733,11 @@
         else if (act === 'add-persona') f.personas.push({ nombre: '', importe: '' });
         else if (act === 'quitar-persona') f.personas.splice(+a.dataset.i, 1);
         else if (act === 'repartir') {
-          var n = f.personas.length, resto = C.num(f.importe) - C.num(f.miParte);
-          if (n && resto > 0) {
-            var cada = Math.floor(resto / n * 100) / 100;
-            f.personas.forEach(function (p, i) { p.importe = aInput(i === n - 1 ? C.r2(resto - cada * (n - 1)) : cada); });
+          // Entre tú y las personas, en céntimos exactos; si sobra algún céntimo, va a tu parte.
+          var n = f.personas.length, total = cent(f.importe);
+          if (n && total > 0) {
+            var cada = Math.floor(total / (n + 1));
+            f.personas.forEach(function (p) { p.importe = aInput(cada / 100); });
           }
         } else if (act === 'borrar-mov') { confirmarBorrado(f); return; }
         else return;
@@ -773,17 +782,16 @@
       } else if (f.tipo === 'ingreso' && f.salda) { m2.cat = ''; m2.sub = ''; m2.pagaDeuda = f.salda.trim(); }
       var lista = [];
       if (f.tipo === 'gasto' && f.compartido) {
-        var mia = C.r2(C.num(f.miParte));
         var ps = f.personas.filter(function (p) { return p.nombre.trim() || C.num(p.importe); });
         if (!ps.length) return error(body, 'Añade quién te debe su parte.');
         for (var i = 0; i < ps.length; i++) {
           if (!ps[i].nombre.trim()) return error(body, 'Falta el nombre de una persona.');
           if (!(C.num(ps[i].importe) > 0)) return error(body, 'Falta lo que debe ' + ps[i].nombre.trim() + '.');
         }
-        var suma = C.r2(mia + ps.reduce(function (a, p) { return a + C.num(p.importe); }, 0));
-        if (Math.abs(suma - importe) > 0.005) return error(body, 'Tu parte más lo que te deben tiene que sumar ' + fmt(importe) + '.');
-        m2.miParte = mia;
-        lista = ps.map(function (p) { return { id: C.uid(), movId: m2.id, fecha: m2.fecha, persona: p.nombre.trim(), importe: C.r2(C.num(p.importe)), concepto: m2.concepto }; });
+        var mia = cent(importe) - ps.reduce(function (a, p) { return a + cent(p.importe); }, 0);
+        if (mia < 0) return error(body, 'Lo que te deben no puede ser más que la cantidad (' + fmt(importe) + ').');
+        m2.miParte = mia / 100;
+        lista = ps.map(function (p) { return { id: C.uid(), movId: m2.id, fecha: m2.fecha, persona: p.nombre.trim(), importe: cent(p.importe) / 100, concepto: m2.concepto }; });
       }
       ops.push({ op: 'mov', mov: m2 });
       var teniaDeudas = f.id && (V.deudas || []).some(function (d) { return d.movId === f.id; });
