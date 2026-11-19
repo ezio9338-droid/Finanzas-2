@@ -700,6 +700,11 @@
     function centMia() { return cent(f.importe) - centOtros(); }
     function textoMia() { return f.importe === '' ? '—' : fmt(centMia() / 100); }
     function pista() {
+      if (f.tipo === 'ingreso' && f.salda && cent(f.importe)) {
+        var dp = C.deudas(V).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(f.salda); })[0];
+        var sobra = cent(f.importe) - (dp ? cent(dp.pendiente) : 0);
+        return sobra > 0 ? 'Te paga ' + fmt(sobra / 100) + ' más de lo que te debe: lo que sobra se descontará de sus próximas deudas.' : '';
+      }
       if (f.tipo !== 'gasto' || !f.compartido || !cent(f.importe)) return '';
       var mia = centMia();
       if (mia < 0) return 'Lo que te deben supera la cantidad en ' + fmt(-mia / 100) + '.';
@@ -1030,15 +1035,26 @@
   function abrirPersona(nombre) {
     var d = C.deudas(V).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(nombre); })[0];
     if (!d) return;
+    // Deudas ya saldadas de esta persona, para poder revisarlas (y corregir un céntimo arrastrado).
+    var abiertas = d.items.map(function (it) { return it.deuda.id; });
+    var saldadas = (V.deudas || []).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(nombre) && abiertas.indexOf(x.id) < 0; })
+      .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+    var arrastre = d.items.length && d.items[0].pagado > 0;
     abrirHoja({
       titulo: d.persona, html:
         '<div class="debts"><span>Te debe</span><b class="amt" style="font-size:20px">' + fmt(d.pendiente) + '</b></div>' +
         '<div class="card">' + d.items.map(function (it) {
           return '<div class="item"><div class="emo">' + icono((mov(it.deuda.movId) || {}).cat) + '</div><div class="grow"><div class="t">' + esc(it.deuda.concepto || 'Gasto compartido') + '</div><small>' + fCorta(it.deuda.fecha) + ' · ' + fmt(it.deuda.importe) + (it.pagado > 0 ? ' · pagado ' + fmt(it.pagado) : '') + '</small></div><span class="amt neg">' + fmt(it.restante) + '</span></div>';
         }).join('') + '</div>' +
-        (d.pagado > 0 ? '<p class="hint">Te ha pagado ' + fmt(d.pagado) + ' hasta ahora.</p>' : '') +
+        (d.pagado > 0 ? '<p class="hint">Te ha pagado ' + fmt(d.pagado) + ' hasta ahora. Los pagos se descuentan de la deuda más antigua' +
+          (arrastre ? '; si uno fue mayor que la deuda, lo que sobró se ha descontado de la siguiente (por eso una aparece como «pagado»).' : '.') + '</p>' : '') +
+        (saldadas.length ? '<details class="done-list"><summary>Ya saldadas (' + saldadas.length + ')</summary><div class="card">' + saldadas.map(function (x) {
+          return '<div class="item tap" data-mov="' + esc(x.movId) + '"><div class="emo">' + icono((mov(x.movId) || {}).cat) + '</div><div class="grow"><div class="t">' + esc(x.concepto || 'Gasto compartido') + '</div><small>' + fCorta(x.fecha) + '</small></div><span class="amt">' + fmt(x.importe) + '</span><span class="chev">›</span></div>';
+        }).join('') + '</div></details>' : '') +
         '<button class="btn primary block" data-act="pago">Registrar un pago (Bizum)</button>',
       onClick: function (e) {
+        var g = e.target.closest('[data-mov]');
+        if (g) { var gm = mov(g.dataset.mov); if (gm) { cerrarHoja(); abrirMovimiento(gm); } return; }
         if (!e.target.closest('[data-act="pago"]')) return;
         cerrarHoja();
         abrirMovimiento(null, { tipo: 'ingreso', salda: d.persona, importe: aInput(d.pendiente) });
