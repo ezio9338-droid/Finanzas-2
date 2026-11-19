@@ -389,7 +389,7 @@
     var h = '<div class="title"><span>Más</span>' + pillHTML() + '</div>' + avisosGenerales();
     h += '<div class="card">' + fila('📊', 'Estadísticas', '', 'sub', 'stats') + fila('📌', 'Gastos fijos', activos + ' activos', 'sub', 'fijos') +
       fila('🏷️', 'Categorías', cats('gasto').length + cats('ingreso').length + ' categorías', 'sub', 'cats') + fila('📅', 'Meses anteriores', 'Previsto frente a real', 'sub', 'meses') + '</div>';
-    h += '<div class="card">' + fila('🔒', 'Seguridad', met, 'sub', 'seguridad') +
+    h += '<div class="card">' + fila('🔒', 'Seguridad', met, 'sub', 'seguridad') + fila('💾', 'Copia de seguridad', 'Descargar todos tus datos (JSON)', 'exportar', '') +
       (modo() === 'demo' ? '' : fila('🔗', 'Conexión con la hoja', e.txt + (sync.ultimo ? ' · ' + new Date(sync.ultimo).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''), 'sub', 'conexion')) + '</div>';
     if (modo() === 'demo') h += '<button class="btn block" data-act="salir-demo">Salir del modo de ejemplo</button>';
     h += '<p class="note" style="text-align:center">Hucha ' + VERSION + '</p>';
@@ -613,6 +613,9 @@
       for (var k in (preset || {})) f[k] = preset[k];
     }
     if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' });
+    // Un pago que llevaba aparte lo que sobró («Redondeo de …»): se edita como un solo importe.
+    var extraPrevio = f.id ? mov(f.id + '-extra') : null;
+    if (extraPrevio) { f.importe = aInput(C.r2(C.num(f.importe) + C.num(extraPrevio.importe))); f.sobra = 'quedo'; }
 
     function pintar() {
       var h = '<div class="seg">' + [['gasto', 'Gasto'], ['ingreso', 'Ingreso'], ['transferencia', 'Transferencia']].map(function (o) {
@@ -636,6 +639,13 @@
             var d = ds.filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(n); })[0];
             return '<button class="chip' + (C.clavePersona(f.salda) === C.clavePersona(n) ? ' on' : '') + '" data-set="salda" data-v="' + esc(n) + '">' + esc(n) + (d ? ' · ' + fmt(d.pendiente) : '') + '</button>';
           }).join('') + '</div>' : '<p class="hint">Nadie te debe nada ahora mismo.</p>';
+          var ex = excesoPago();
+          if (ex.sobra > 0) {
+            h += '<div class="field"><div class="frow"><span>Sobran ' + fmt(ex.sobra / 100) + '</span></div><div class="seg" style="margin:0 10px 10px">' +
+              [['quedo', 'Me lo quedo'], ['favor', 'A su favor']].map(function (o) {
+                return '<button class="' + ((f.sobra || 'quedo') === o[0] ? 'on' : '') + '" data-set="sobra" data-v="' + o[0] + '">' + o[1] + '</button>';
+              }).join('') + '</div></div>';
+          }
         }
       }
       if ((f.tipo === 'gasto' || f.tipo === 'ingreso') && !(f.tipo === 'ingreso' && (f.salda || f.saldaOn || f.devolOn))) {
@@ -699,7 +709,21 @@
     /** Mi parte = la cantidad menos lo que te deben los demás (en céntimos exactos). */
     function centMia() { return cent(f.importe) - centOtros(); }
     function textoMia() { return f.importe === '' ? '—' : fmt(centMia() / 100); }
+    /** Lo que te debía (sin contar este pago) y lo que sobra del pago, en céntimos. */
+    function excesoPago() {
+      if (f.tipo !== 'ingreso' || !f.salda) return { debia: 0, sobra: 0 };
+      var sin = { deudas: V.deudas, movimientos: V.movimientos.filter(function (x) { return !f.id || (x.id !== f.id && x.id !== f.id + '-extra'); }) };
+      var dp = C.deudas(sin).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(f.salda); })[0];
+      var debia = dp ? cent(dp.pendiente) : 0;
+      return { debia: debia, sobra: Math.max(0, cent(f.importe) - debia) };
+    }
     function pista() {
+      if (f.tipo === 'ingreso' && f.salda && cent(f.importe)) {
+        var ex = excesoPago();
+        if (!ex.sobra) return '';
+        return 'Te paga ' + fmt(ex.sobra / 100) + ' más de lo que te debía (' + fmt(ex.debia / 100) + '). ' +
+          ((f.sobra || 'quedo') === 'quedo' ? 'Te lo quedas: se apunta como ingreso extra («Redondeo»).' : 'Queda a su favor: se descontará de lo próximo que te deba.');
+      }
       if (f.tipo !== 'gasto' || !f.compartido || !cent(f.importe)) return '';
       var mia = centMia();
       if (mia < 0) return 'Lo que te deben supera la cantidad en ' + fmt(-mia / 100) + '.';
@@ -716,7 +740,11 @@
       onInput: function (e) {
         var el = e.target;
         if (el.dataset.f === 'devolQ') { if (e.type !== 'input') return; f.devolQ = el.value; var dl = $('#devol-lista', body); if (dl) dl.innerHTML = listaDevol(); return; }
-        if (el.dataset.f) { f[el.dataset.f] = el.value; actualizarPista(); }
+        if (el.dataset.f) {
+          f[el.dataset.f] = el.value; actualizarPista();
+          // Al terminar de escribir, muestra u oculta la elección de qué hacer con lo que sobra.
+          if (e.type !== 'input' && f.tipo === 'ingreso' && f.salda && !!$('[data-set="sobra"]', body) !== excesoPago().sobra > 0) repintar(body, pintar());
+        }
         else if (el.dataset.p !== undefined) { f.personas[+el.dataset.p][el.dataset.pk] = el.value; actualizarPista(); }
       },
       onClick: function (e) {
@@ -807,6 +835,18 @@
       if (f.tipo === 'transferencia') {
         m2.cuenta = f.dir === 'st' ? SANT : TRADE; m2.destino = f.dir === 'st' ? TRADE : SANT; m2.cat = 'Ahorro'; m2.sub = 'Trade Republic';
       } else if (f.tipo === 'ingreso' && f.salda) { m2.cat = ''; m2.sub = ''; m2.pagaDeuda = f.salda.trim(); }
+      // Pago mayor que la deuda (redondeo, propina…): o te lo quedas como ingreso extra, o queda a su favor.
+      var extra = null;
+      if (f.tipo === 'ingreso' && f.salda && (f.sobra || 'quedo') === 'quedo') {
+        var ex = excesoPago();
+        if (ex.sobra > 0) {
+          if (ex.debia > 0) {
+            m2.importe = ex.debia / 100;
+            extra = { id: m2.id + '-extra', fecha: m2.fecha, tipo: 'ingreso', importe: ex.sobra / 100, cuenta: SANT, destino: '', cat: 'Otros ingresos', sub: 'Otros',
+              concepto: 'Redondeo de ' + m2.pagaDeuda, miParte: '', pagaDeuda: '', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', act: m2.act };
+          } else { m2.pagaDeuda = ''; m2.cat = 'Otros ingresos'; m2.sub = 'Otros'; if (!f.concepto.trim()) m2.concepto = 'De ' + f.salda.trim(); }
+        }
+      }
       var lista = [];
       if (f.tipo === 'gasto' && f.compartido) {
         var ps = f.personas.filter(function (p) { return p.nombre.trim() || C.num(p.importe); });
@@ -821,6 +861,8 @@
         lista = ps.map(function (p) { return { id: C.uid(), movId: m2.id, fecha: m2.fecha, persona: p.nombre.trim(), importe: cent(p.importe) / 100, concepto: m2.concepto }; });
       }
       ops.push({ op: 'mov', mov: m2 });
+      if (extra) ops.push({ op: 'mov', mov: extra });
+      else if (f.id && mov(f.id + '-extra')) ops.push({ op: 'borrar', id: f.id + '-extra' });
       var teniaDeudas = f.id && (V.deudas || []).some(function (d) { return d.movId === f.id; });
       if (lista.length || teniaDeudas) ops.push({ op: 'deudas', movId: m2.id, lista: lista });
       if (f.deboId) ops.push({ op: 'borrarDebo', id: f.deboId }); // pagada una deuda de «Debo»: sale de la lista
@@ -877,7 +919,12 @@
   function confirmarBorrado(f) {
     abrirHoja({
       titulo: 'Borrar movimiento', html: '<p>Se borrará «' + esc(f.concepto || 'movimiento') + '» de ' + fmt(C.num(f.importe)) + (f.previsto ? ' y la partida volverá a pendientes' : '') + '.</p><button class="btn block danger" data-act="si">Borrar</button>',
-      onClick: function (e) { if (e.target.closest('[data-act="si"]')) { cerrarHoja(true); commit([{ op: 'borrar', id: f.id }]); toast('Borrado'); } }
+      onClick: function (e) {
+        if (!e.target.closest('[data-act="si"]')) return;
+        var ops = [{ op: 'borrar', id: f.id }];
+        if (mov(f.id + '-extra')) ops.push({ op: 'borrar', id: f.id + '-extra' }); // su «Redondeo» va con él
+        cerrarHoja(true); commit(ops); toast('Borrado');
+      }
     });
   }
 
@@ -935,6 +982,40 @@
   function avisoServidor() {
     return modo() === 'online' && sync.version && sync.version < 4 ? '<p class="hint bad">Para que se guarde, actualiza el Apps Script (Code.gs y Core.gs) y publica una versión nueva.</p>' : '';
   }
+  // ---------- Copia de seguridad ----------
+  /** Todos los datos (con lo pendiente de sincronizar) en un JSON legible, para guardarlo o llevarlo a otra app. */
+  function abrirExportar() {
+    var n = (V.movimientos || []).length;
+    abrirHoja({
+      titulo: 'Copia de seguridad', guardar: '',
+      html: '<p>Descarga un archivo <b>JSON</b> con todos tus datos: ' + n + ' movimientos, deudas, previsiones, gastos fijos, categorías, ahorro, «Debo» y la configuración.</p>' +
+        '<p class="hint bad">⚠️ El archivo va <b>sin cifrar</b>. Guárdalo en un sitio seguro (por ejemplo, Archivos → iCloud Drive) y bórralo cuando no lo necesites.</p>' +
+        '<p class="note" style="margin:0">No incluye la URL ni la clave secreta de tu hoja.</p>' +
+        '<button class="btn primary block" data-act="descargar">Descargar copia</button>',
+      onClick: function (e) { if (e.target.closest('[data-act="descargar"]')) { cerrarHoja(); exportar(); } }
+    });
+  }
+  function exportar() {
+    var datos = { app: 'Hucha', formato: 1, exportado: new Date().toISOString(), hoy: hoy(), datos: clone(V) };
+    var nombre = 'hucha-' + hoy() + '.json', texto = JSON.stringify(datos, null, 2);
+    var blob = new Blob([texto], { type: 'application/json' });
+    // En el iPhone, la hoja de compartir permite «Guardar en Archivos»; si no, descarga normal.
+    try {
+      var file = new File([blob], nombre, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: nombre }).catch(function (e) { if (e && e.name !== 'AbortError') descargar(); });
+        return;
+      }
+    } catch (e) {}
+    descargar();
+    function descargar() {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      toast('💾 Copia descargada');
+    }
+  }
+
   function abrirDesmarcar(l) {
     var m = l.hecho;
     abrirHoja({
@@ -1030,15 +1111,26 @@
   function abrirPersona(nombre) {
     var d = C.deudas(V).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(nombre); })[0];
     if (!d) return;
+    // Deudas ya saldadas de esta persona, para poder revisarlas (y corregir un céntimo arrastrado).
+    var abiertas = d.items.map(function (it) { return it.deuda.id; });
+    var saldadas = (V.deudas || []).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(nombre) && abiertas.indexOf(x.id) < 0; })
+      .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+    var arrastre = d.items.length && d.items[0].pagado > 0;
     abrirHoja({
       titulo: d.persona, html:
         '<div class="debts"><span>Te debe</span><b class="amt" style="font-size:20px">' + fmt(d.pendiente) + '</b></div>' +
         '<div class="card">' + d.items.map(function (it) {
           return '<div class="item"><div class="emo">' + icono((mov(it.deuda.movId) || {}).cat) + '</div><div class="grow"><div class="t">' + esc(it.deuda.concepto || 'Gasto compartido') + '</div><small>' + fCorta(it.deuda.fecha) + ' · ' + fmt(it.deuda.importe) + (it.pagado > 0 ? ' · pagado ' + fmt(it.pagado) : '') + '</small></div><span class="amt neg">' + fmt(it.restante) + '</span></div>';
         }).join('') + '</div>' +
-        (d.pagado > 0 ? '<p class="hint">Te ha pagado ' + fmt(d.pagado) + ' hasta ahora.</p>' : '') +
+        (d.pagado > 0 ? '<p class="hint">Te ha pagado ' + fmt(d.pagado) + ' hasta ahora. Los pagos se descuentan de la deuda más antigua' +
+          (arrastre ? '; si uno fue mayor que la deuda, lo que sobró se ha descontado de la siguiente (por eso una aparece como «pagado»).' : '.') + '</p>' : '') +
+        (saldadas.length ? '<details class="done-list"><summary>Ya saldadas (' + saldadas.length + ')</summary><div class="card">' + saldadas.map(function (x) {
+          return '<div class="item tap" data-mov="' + esc(x.movId) + '"><div class="emo">' + icono((mov(x.movId) || {}).cat) + '</div><div class="grow"><div class="t">' + esc(x.concepto || 'Gasto compartido') + '</div><small>' + fCorta(x.fecha) + '</small></div><span class="amt">' + fmt(x.importe) + '</span><span class="chev">›</span></div>';
+        }).join('') + '</div></details>' : '') +
         '<button class="btn primary block" data-act="pago">Registrar un pago (Bizum)</button>',
       onClick: function (e) {
+        var g = e.target.closest('[data-mov]');
+        if (g) { var gm = mov(g.dataset.mov); if (gm) { cerrarHoja(); abrirMovimiento(gm); } return; }
         if (!e.target.closest('[data-act="pago"]')) return;
         cerrarHoja();
         abrirMovimiento(null, { tipo: 'ingreso', salda: d.persona, importe: aInput(d.pendiente) });
@@ -1293,6 +1385,7 @@
     else if (act === 'conectar') conectar($('#w-url').value, $('#w-clave').value);
     else if (act === 'demo') entrarDemo();
     else if (act === 'ir') irA(id);
+    else if (act === 'exportar') abrirExportar();
     else if (act === 'sub') { ui.sub = id; render(); window.scrollTo(0, 0); }
     else if (act === 'atras') { ui.sub = null; render(); window.scrollTo(0, 0); }
     else if (act === 'editar') { var m = mov(id); if (m) abrirMovimiento(m); }
