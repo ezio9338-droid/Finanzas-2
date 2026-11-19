@@ -239,6 +239,12 @@ var HuchaCore = (function () {
     });
     return out.sort(function (a, b) { return b.pendiente - a.pendiente; });
   }
+  /** Gastos con una devolución pedida que aún no ha llegado (la más antigua primero). */
+  function devolucionesPendientes(st) {
+    return (st.movimientos || []).filter(function (m) { return m.tipo === 'gasto' && num(m.devolPend) > 0; })
+      .sort(function (a, b) { var x = a.fechaDevolPend || a.fecha, y = b.fechaDevolPend || b.fecha; return x < y ? -1 : x > y ? 1 : 0; });
+  }
+  function totalDevolPend(st) { return r2(devolucionesPendientes(st).reduce(function (a, m) { return a + num(m.devolPend); }, 0)); }
   function totalMeDeben(st) { return r2(deudas(st).reduce(function (a, d) { return a + d.pendiente; }, 0)); }
   function personasConocidas(st) {
     var vistos = {}, out = [];
@@ -429,7 +435,7 @@ var HuchaCore = (function () {
     parteMia: parteMia, devuelto: devuelto, neto: neto, efecto: efecto, saldo: saldo,
     categoriasBase: categoriasBase, icono: icono,
     ocurrencias: ocurrencias, prevision: prevision, resumenPrevision: resumenPrevision, objetivoMes: objetivoMes,
-    deudas: deudas, totalMeDeben: totalMeDeben, personasConocidas: personasConocidas, clavePersona: clavePersona,
+    deudas: deudas, totalMeDeben: totalMeDeben, devolucionesPendientes: devolucionesPendientes, totalDevolPend: totalDevolPend, personasConocidas: personasConocidas, clavePersona: clavePersona,
     filaAhorro: filaAhorro, interesEstimado: interesEstimado, ahorroMes: ahorroMes, resumenAhorro: resumenAhorro, mesInicio: mesInicio,
     resumenMes: resumenMes, aplicarOps: aplicarOps, estadoEjemplo: estadoEjemplo
   };

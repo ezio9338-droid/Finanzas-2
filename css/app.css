@@ -158,6 +158,7 @@ details.done-list .item { border-top: 1px solid var(--line); }
 .frow { display: flex; justify-content: space-between; align-items: center; padding: 6px 14px; min-height: 48px; font-size: 15.5px; gap: 10px; }
 .frow + .frow, .frow + .person, .person + .person, .person + .frow { border-top: 1px solid var(--line); }
 .frow > .k { color: var(--muted); flex: none; }
+.frow .mia { margin-left: auto; font-size: 17px; }
 .frow input, .frow select, .person input { border: 0; background: none; outline: none; text-align: right; min-width: 0; flex: 1; font-size: 16px; padding: 6px 0; }
 .frow select { text-align-last: right; appearance: none; -webkit-appearance: none; }
 .frow input.big { font-size: 24px; font-weight: 700; }
