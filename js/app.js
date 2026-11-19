@@ -256,6 +256,7 @@
       if (m.miParte !== '' && m.miParte != null) sub.push('tu parte ' + fmt(m.miParte));
       var dev = C.devuelto(m);
       if (dev) sub.push('↩️ devuelto ' + fmt(dev) + ' de ' + fmt(m.importe));
+      if (C.num(m.devolPend) > 0) sub.push('📦 esperando ' + fmt(m.devolPend));
       imp = '−' + fmt(C.neto(m)); cls = C.neto(m) > 0 ? 'neg' : 'mut';
     }
     signo = imp;
@@ -363,6 +364,13 @@
         return '<div class="item tap" data-act="persona" data-id="' + esc(d.persona) + '"><div class="emo">👤</div><div class="grow"><div class="t">' + esc(d.persona) + '</div><small>' + info + '</small></div><span class="amt neg">' + fmt(d.pendiente) + '</span><span class="chev">›</span></div>';
       }).join('') : '<div class="empty">Nadie te debe nada.</div>') + '</div>';
     h += '<p class="note">Cuando te paguen, pulsa ＋ → Ingreso y activa «Salda una deuda». Se descuenta sola.</p>';
+    var pend = C.devolucionesPendientes(V);
+    h += '<div class="card"><h3>Devoluciones pendientes <span class="amt">' + (pend.length ? fmt(C.totalDevolPend(V)) : '') + '</span></h3>' +
+      (pend.length ? pend.map(function (m) {
+        return '<div class="item tap" data-act="editar" data-id="' + esc(m.id) + '"><div class="emo">' + esc(iconoFijo(m) || icono(m.cat)) + '</div><div class="grow"><div class="t">' + esc(m.concepto || m.sub || m.cat || 'Compra') + '</div>' +
+          '<small>Devuelto el ' + fCorta(m.fechaDevolPend || m.fecha) + '</small></div><span class="amt">' + fmt(m.devolPend) + '</span>' +
+          sw(false, 'devol-ok', 'data-id="' + esc(m.id) + '" aria-label="Ya me han devuelto ' + esc(m.concepto || '') + '"', 'green') + '</div>';
+      }).join('') : '<div class="empty">No esperas ninguna devolución. Actívala en el gasto con «📦 Lo he devuelto».</div>') + '</div>' + (pend.length ? avisoServidor() : '');
     var debo = (V.debo || []).slice().sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; });
     h += '<div class="card"><h3>Debo <span>Solo recordatorio</span></h3>' +
       debo.map(function (d) {
@@ -597,10 +605,11 @@
         compartido: m.tipo === 'gasto' && m.miParte !== '' && m.miParte != null, miParte: aInput(m.miParte),
         personas: ds.map(function (d) { return { nombre: d.persona, importe: aInput(d.importe) }; }),
         salda: m.pagaDeuda || '', dir: m.cuenta === TRADE ? 'ts' : 'st', previsto: m.previsto || '', prevImporte: m.prevImporte === undefined ? '' : m.prevImporte,
-        devuelto: aInput(m.devuelto), fechaDevuelto: m.fechaDevuelto || '', devolOn: false, devol: '', devolQ: ''
+        devuelto: aInput(m.devuelto), fechaDevuelto: m.fechaDevuelto || '', devolOn: false, devol: '', devolQ: '',
+        pendOn: C.num(m.devolPend) > 0, devolPend: aInput(m.devolPend), fechaDevolPend: m.fechaDevolPend || ''
       };
     } else {
-      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', devolOn: false, devol: '', devolQ: '' };
+      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', devolOn: false, devol: '', devolQ: '', pendOn: false, devolPend: '', fechaDevolPend: '' };
       for (var k in (preset || {})) f[k] = preset[k];
     }
     if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' });
@@ -656,6 +665,13 @@
           h += '<div class="field"><div class="frow"><span class="k">↩️ Devuelto</span><input class="amt" data-f="devuelto" inputmode="decimal" value="' + esc(f.devuelto) + '"></div>' +
             '<div class="frow"><span class="k">Fecha devolución</span><input type="date" data-f="fechaDevuelto" value="' + esc(f.fechaDevuelto) + '"></div></div>';
         }
+        h += '<div class="field"><div class="frow"><span>📦 Lo he devuelto, espero el dinero</span>' + sw(f.pendOn, 'toggle-pend') + '</div>';
+        if (f.pendOn) {
+          h += '<div class="frow"><span class="k">Me tienen que devolver</span><input class="amt" data-f="devolPend" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.devolPend) + '"></div>' +
+            '<div class="frow"><span class="k">Devuelto el</span><input type="date" data-f="fechaDevolPend" value="' + esc(f.fechaDevolPend) + '"></div>';
+        }
+        h += '</div>';
+        if (f.pendOn) h += '<p class="note">Aparecerá en Deudas como recordatorio. Cuando llegue el dinero, márcalo allí y se descontará de este gasto.</p>' + avisoServidor();
         if (f.id) h += '<button class="btn block" data-act="nueva-devol">↩️ Registrar una devolución</button>';
         h += '<datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
       }
@@ -719,6 +735,10 @@
         var act = a.dataset.act;
         if (act === 'toggle-comp') { f.compartido = !f.compartido; if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' }); }
         else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else { f.saldaOn = true; f.devolOn = false; f.devol = ''; } }
+        else if (act === 'toggle-pend') {
+          f.pendOn = !f.pendOn;
+          if (f.pendOn) { if (!f.devolPend) f.devolPend = aInput(C.r2(C.num(f.importe) - C.num(f.devuelto))); if (!f.fechaDevolPend) f.fechaDevolPend = hoy(); }
+        }
         else if (act === 'toggle-devol') { f.devolOn = !f.devolOn; f.devol = ''; if (f.devolOn) { f.salda = ''; f.saldaOn = false; } }
         else if (act === 'nueva-devol') { var orig = mov(f.id); if (orig) { cerrarHoja(); abrirMovimiento(null, { tipo: 'ingreso', devolOn: true, devol: orig.id, importe: aInput(C.neto(orig)) }); } return; }
         else if (act === 'calc') {
@@ -753,6 +773,7 @@
       if (importe > resto + 0.005) return error(body, 'De esa compra solo quedan ' + fmt(resto) + ' por devolver.');
       var g2 = clone(g);
       g2.devuelto = C.r2(C.devuelto(g) + importe); g2.fechaDevuelto = f.fecha;
+      g2.devolPend = ''; g2.fechaDevolPend = ''; // si estaba pendiente, ya ha llegado
       var ops = [{ op: 'mov', mov: g2 }];
       if (f.id) ops.push({ op: 'borrar', id: f.id }); // un ingreso que se convierte en devolución
       cerrarHoja(true); commit(ops);
@@ -776,6 +797,12 @@
         if (m2.devuelto > importe) return error(body, 'Lo devuelto no puede ser más que lo que pagaste.');
       }
       if (!m2.concepto) m2.concepto = f.sub || f.cat;
+      if (f.tipo === 'gasto' && f.pendOn) {
+        var pend = C.r2(C.num(f.devolPend));
+        if (!(pend > 0)) return error(body, 'Escribe cuánto te tienen que devolver.');
+        if (pend > C.r2(importe - C.num(m2.devuelto)) + 0.005) return error(body, 'No te pueden devolver más de lo que pagaste.');
+        m2.devolPend = pend; m2.fechaDevolPend = f.fechaDevolPend || hoy();
+      } else { m2.devolPend = ''; m2.fechaDevolPend = ''; }
       var ops = [];
       if (f.tipo === 'transferencia') {
         m2.cuenta = f.dir === 'st' ? SANT : TRADE; m2.destino = f.dir === 'st' ? TRADE : SANT; m2.cat = 'Ahorro'; m2.sub = 'Trade Republic';
@@ -879,6 +906,34 @@
       commit([{ op: 'mov', mov: m }]);
       toast('✓ ' + l.concepto);
     }
+  }
+  /** Ha llegado una devolución pendiente: rebaja el gasto original y la quita de la lista. */
+  function abrirDevolRecibida(m) {
+    var s = { importe: aInput(m.devolPend), fecha: hoy() };
+    var body = abrirHoja({
+      titulo: 'Devolución recibida', guardar: '',
+      html: '<p class="note" style="margin:0">' + esc(m.concepto || m.cat) + ' · compra del ' + fCorta(m.fecha) + ' por ' + fmt(m.importe) + '</p>' +
+        '<div class="field"><div class="frow"><span class="k">Te han devuelto</span><input class="big amt" data-f="importe" inputmode="decimal" value="' + esc(s.importe) + '"></div>' +
+        '<div class="frow"><span class="k">Fecha</span><input type="date" data-f="fecha" value="' + s.fecha + '"></div></div>' +
+        '<p class="hint" data-err>No se apunta como ingreso: se descuenta de la compra original. Corrige la cantidad si no coincide.</p>' +
+        '<button class="btn primary block" data-act="ok">Marcar como devuelto</button>',
+      onInput: function (e) { if (e.target.dataset.f) s[e.target.dataset.f] = e.target.value; },
+      onClick: function (e) { if (e.target.closest('[data-act="ok"]')) ok(); }
+    });
+    function ok() {
+      var imp = C.r2(C.num(s.importe)), resto = C.neto(m);
+      if (!(imp > 0)) return error(body, 'Escribe la cantidad.');
+      if (!s.fecha) return error(body, 'Elige la fecha.');
+      if (imp > resto + 0.005) return error(body, 'De esa compra solo quedan ' + fmt(resto) + ' por devolver.');
+      var m2 = clone(m);
+      m2.devuelto = C.r2(C.devuelto(m) + imp); m2.fechaDevuelto = s.fecha; m2.devolPend = ''; m2.fechaDevolPend = '';
+      cerrarHoja(true); commit([{ op: 'mov', mov: m2 }]);
+      toast('↩️ «' + (m.concepto || m.cat) + '» ahora te cuesta ' + fmt(C.neto(m2)));
+    }
+  }
+  /** Aviso si el Apps Script aún no sabe guardar las devoluciones pendientes. */
+  function avisoServidor() {
+    return modo() === 'online' && sync.version && sync.version < 4 ? '<p class="hint bad">Para que se guarde, actualiza el Apps Script (Code.gs y Core.gs) y publica una versión nueva.</p>' : '';
   }
   function abrirDesmarcar(l) {
     var m = l.hecho;
@@ -1254,6 +1309,7 @@
     else if (act === 'persona') abrirPersona(id);
     else if (act === 'debo') { var dd = (V.debo || []).filter(function (x) { return x.id === id; })[0]; if (dd) abrirDebo(dd); }
     else if (act === 'debo-nuevo') abrirDebo(null);
+    else if (act === 'devol-ok') { var mp = mov(id); if (mp) abrirDevolRecibida(mp); }
     else if (act === 'debo-ok') {
       // Abre el movimiento ya relleno; solo se apunta (y se quita de la lista) si lo guardas.
       var db = (V.debo || []).filter(function (x) { return x.id === id; })[0];
