@@ -712,7 +712,12 @@
     /** Lo que te debía (sin contar este pago) y lo que sobra del pago, en céntimos. */
     function excesoPago() {
       if (f.tipo !== 'ingreso' || !f.salda) return { debia: 0, sobra: 0 };
-      var sin = { deudas: V.deudas, movimientos: V.movimientos.filter(function (x) { return !f.id || (x.id !== f.id && x.id !== f.id + '-extra'); }) };
+      // Lo que debía en la fecha del pago: sin este pago ni las deudas o pagos posteriores.
+      var fp = f.fecha || hoy();
+      var sin = {
+        deudas: (V.deudas || []).filter(function (d) { return (d.fecha || '') <= fp; }),
+        movimientos: V.movimientos.filter(function (x) { return x.fecha <= fp && (!f.id || (x.id !== f.id && x.id !== f.id + '-extra')); })
+      };
       var dp = C.deudas(sin).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(f.salda); })[0];
       var debia = dp ? cent(dp.pendiente) : 0;
       return { debia: debia, sobra: Math.max(0, cent(f.importe) - debia) };
