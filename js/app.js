@@ -676,7 +676,6 @@
         }
         h += '</div>';
         if (f.pendOn) h += '<p class="note">Aparecerá en Deudas como recordatorio. Cuando llegue el dinero, márcalo allí y se descontará de este gasto.</p>' + avisoServidor();
-        if (f.id) h += '<button class="btn block" data-act="nueva-devol">↩️ Registrar una devolución</button>';
         h += '<datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
       }
       h += '<p class="hint" data-err>' + esc(pista()) + '</p>';
@@ -757,7 +756,6 @@
           f.pendOn = !f.pendOn;
           if (f.pendOn) { if (!f.devolPend) f.devolPend = aInput(C.r2(C.num(f.importe) - C.num(f.devuelto))); if (!f.fechaDevolPend) f.fechaDevolPend = hoy(); }
         }
-        else if (act === 'nueva-devol') { var orig = mov(f.id); if (orig) { cerrarHoja(); abrirDevolRecibida(orig); } return; }
         else if (act === 'calc') {
           var tg = a.dataset.t, esP = tg.charAt(0) === 'p', pi = esP ? +tg.slice(1) : -1;
           var titulo = tg === 'importe' ? 'Cantidad' : tg === 'miParte' ? 'Mi parte' : 'Debe ' + (f.personas[pi].nombre.trim() || 'esta persona');
@@ -928,9 +926,9 @@
       toast('✓ ' + l.concepto);
     }
   }
-  /** Ha llegado una devolución (pendiente o no): rebaja el gasto original y la quita de pendientes. */
+  /** Ha llegado una devolución pendiente: rebaja el gasto original y la quita de la lista. */
   function abrirDevolRecibida(m) {
-    var s = { importe: aInput(C.num(m.devolPend) > 0 ? m.devolPend : C.neto(m)), fecha: hoy() };
+    var s = { importe: aInput(m.devolPend), fecha: hoy() };
     var body = abrirHoja({
       titulo: 'Devolución recibida', guardar: '',
       html: '<p class="note" style="margin:0">' + esc(m.concepto || m.cat) + ' · compra del ' + fCorta(m.fecha) + ' por ' + fmt(m.importe) + '</p>' +

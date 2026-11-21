@@ -88,7 +88,7 @@ Antes de conectar, puedes pulsar **Probar con datos de ejemplo** para ver la app
 | Una cena que me pagarán | En el gasto, activa **Compartido**, pon **tu parte** y quién te debe el resto (**Repartir a partes iguales** lo calcula). | Si una parte son varias cantidades, pulsa 🧮 junto a la cifra y súmalas.
 | Registrar un Bizum que salda una deuda | **＋ → Ingreso → Salda una deuda** y elige la persona. O en **Deudas**, toca la persona → **Registrar un pago**. |
 | Devuelvo una compra y espero el dinero | Abre el gasto y activa **📦 Lo he devuelto, espero el dinero** (pon cuánto te tienen que devolver: todo o una parte). Aparece en **Deudas → Devoluciones pendientes**. |
-| Me devuelven una compra | En **Deudas → Devoluciones pendientes**, activa la devolución; o abre la compra → **Registrar una devolución**. No se crea un movimiento nuevo: la compra original pasa a costar lo neto (en su mes) y el saldo sube el día de la devolución. |
+| Me devuelven una compra | En **Deudas → Devoluciones pendientes**, activa la devolución. No se crea un movimiento nuevo: la compra original pasa a costar lo neto (en su mes) y el saldo sube el día de la devolución. |
 | Pagar algo que debo | En **Deudas → Debo**, activa su interruptor: se abre el gasto ya relleno (concepto e importe). Elige la categoría y guarda; entonces sale de la lista. Si cancelas, se queda. |
 | Cobrar la nómina | **＋ → Ingreso → Nómina**. Después la app ofrece marcar el ahorro del mes. |
 | Pagar un gasto fijo o una partida | Activa su interruptor en **Previsión del mes**, corrige el importe si hace falta y pulsa **Marcar como pagado**. |
