@@ -605,11 +605,11 @@
         compartido: m.tipo === 'gasto' && m.miParte !== '' && m.miParte != null, miParte: aInput(m.miParte),
         personas: ds.map(function (d) { return { nombre: d.persona, importe: aInput(d.importe) }; }),
         salda: m.pagaDeuda || '', dir: m.cuenta === TRADE ? 'ts' : 'st', previsto: m.previsto || '', prevImporte: m.prevImporte === undefined ? '' : m.prevImporte,
-        devuelto: aInput(m.devuelto), fechaDevuelto: m.fechaDevuelto || '', devolOn: false, devol: '', devolQ: '',
+        devuelto: aInput(m.devuelto), fechaDevuelto: m.fechaDevuelto || '', 
         pendOn: C.num(m.devolPend) > 0, devolPend: aInput(m.devolPend), fechaDevolPend: m.fechaDevolPend || ''
       };
     } else {
-      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', devolOn: false, devol: '', devolQ: '', pendOn: false, devolPend: '', fechaDevolPend: '' };
+      f = { id: '', tipo: 'gasto', cat: '', sub: '', concepto: '', importe: '', fecha: t, compartido: false, miParte: '', personas: [], salda: '', dir: 'st', previsto: '', prevImporte: '', devuelto: '', fechaDevuelto: '', pendOn: false, devolPend: '', fechaDevolPend: '' };
       for (var k in (preset || {})) f[k] = preset[k];
     }
     if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' });
@@ -627,13 +627,7 @@
       if (f.tipo === 'ingreso') {
         var ds = C.deudas(V), nombres = ds.map(function (d) { return d.persona; });
         if (f.salda && nombres.map(C.clavePersona).indexOf(C.clavePersona(f.salda)) < 0) nombres.unshift(f.salda);
-        h += '<div class="field"><div class="frow"><span>Es una devolución</span>' + sw(f.devolOn, 'toggle-devol') + '</div>' +
-          '<div class="frow"><span>Salda una deuda</span>' + sw(!!f.salda || f.saldaOn, 'toggle-salda') + '</div></div>';
-        if (f.devolOn) {
-          var g = f.devol ? mov(f.devol) : null;
-          h += g ? '<div class="card"><h3>Compra que te devuelven <button data-set="devol" data-v="">Cambiar</button></h3>' + filaMov(g).replace('data-act="editar"', '') + '</div>'
-            : '<label class="search">🔍<input data-f="devolQ" type="search" placeholder="Busca la compra (concepto)" value="' + esc(f.devolQ) + '" autocomplete="off"></label><div class="card" id="devol-lista">' + listaDevol() + '</div>';
-        }
+        h += '<div class="field"><div class="frow"><span>Salda una deuda</span>' + sw(!!f.salda || f.saldaOn, 'toggle-salda') + '</div></div>';
         if (f.salda || f.saldaOn) {
           h += nombres.length ? '<div class="chips wrap">' + nombres.map(function (n) {
             var d = ds.filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(n); })[0];
@@ -648,7 +642,7 @@
           }
         }
       }
-      if ((f.tipo === 'gasto' || f.tipo === 'ingreso') && !(f.tipo === 'ingreso' && (f.salda || f.saldaOn || f.devolOn))) {
+      if ((f.tipo === 'gasto' || f.tipo === 'ingreso') && !(f.tipo === 'ingreso' && (f.salda || f.saldaOn))) {
         h += '<div class="cats">' + cats(f.tipo).map(function (c) {
           return '<button class="cat' + (f.cat === c.cat ? ' on' : '') + '" data-set="cat" data-v="' + esc(c.cat) + '"><span>' + esc(c.icono || '•') + '</span>' + esc(c.cat) + '</button>';
         }).join('') + '</div>';
@@ -656,7 +650,7 @@
         if (ss.length) h += '<div class="chips">' + ss.map(function (s) { return '<button class="chip' + (f.sub === s ? ' on' : '') + '" data-set="sub" data-v="' + esc(s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
       }
       h += '<div class="field">' +
-        (f.devolOn ? '' : '<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(f.concepto) + '" placeholder="' + esc(placeholderConcepto()) + '" maxlength="120" enterkeyhint="done"></div>') +
+        ('<div class="frow"><span class="k">Concepto</span><input data-f="concepto" value="' + esc(f.concepto) + '" placeholder="' + esc(placeholderConcepto()) + '" maxlength="120" enterkeyhint="done"></div>') +
         '<div class="frow"><span class="k">Cantidad</span><input class="big amt" data-f="importe" inputmode="decimal" placeholder="0,00 €" value="' + esc(f.importe) + '" enterkeyhint="done"><button class="calcbtn" data-act="calc" data-t="importe" aria-label="Calculadora para la cantidad">🧮</button></div>' +
         '<div class="frow"><span class="k">Fecha</span><input type="date" data-f="fecha" value="' + esc(f.fecha) + '"></div></div>';
       if (f.tipo === 'gasto') {
@@ -682,7 +676,6 @@
         }
         h += '</div>';
         if (f.pendOn) h += '<p class="note">Aparecerá en Deudas como recordatorio. Cuando llegue el dinero, márcalo allí y se descontará de este gasto.</p>' + avisoServidor();
-        if (f.id) h += '<button class="btn block" data-act="nueva-devol">↩️ Registrar una devolución</button>';
         h += '<datalist id="dl-personas">' + C.personasConocidas(V).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
       }
       h += '<p class="hint" data-err>' + esc(pista()) + '</p>';
@@ -690,13 +683,6 @@
       if (f.previsto) h += '<p class="note">Viene de la previsión del mes' + (f.prevImporte !== '' ? ' (previsto ' + fmt(f.prevImporte) + ')' : '') + '.</p>';
       if (f.id) h += '<button class="btn block danger" data-act="borrar-mov">Borrar movimiento</button>';
       return h;
-    }
-    function listaDevol() {
-      var q = normal(f.devolQ).trim();
-      var gs = V.movimientos.filter(function (x) { return x.tipo === 'gasto' && C.neto(x) > 0 && (!q || normal([x.concepto, x.cat, x.sub].join(' ')).indexOf(q) >= 0); })
-        .sort(ordenMovs).slice(0, 15);
-      if (!gs.length) return '<div class="empty">No hay compras que coincidan.</div>';
-      return gs.map(function (x) { return filaMov(x).replace('data-act="editar" data-id=', 'data-set="devol" data-v='); }).join('');
     }
     function placeholderConcepto() {
       if (f.tipo === 'transferencia') return f.dir === 'st' ? 'Ahorro ' + C.nombreMes(C.mesDe(f.fecha || t)) : 'Traspaso a Santander';
@@ -744,7 +730,6 @@
       onGuardar: guardar,
       onInput: function (e) {
         var el = e.target;
-        if (el.dataset.f === 'devolQ') { if (e.type !== 'input') return; f.devolQ = el.value; var dl = $('#devol-lista', body); if (dl) dl.innerHTML = listaDevol(); return; }
         if (el.dataset.f) {
           f[el.dataset.f] = el.value; actualizarPista();
           // Al terminar de escribir, muestra u oculta la elección de qué hacer con lo que sobra.
@@ -759,7 +744,6 @@
           if (k === 'tipo' && f.tipo !== v) { f.tipo = v; f.cat = ''; f.sub = ''; }
           else if (k === 'cat') { f.cat = v; f.sub = ''; }
           else if (k === 'sub') f.sub = f.sub === v ? '' : v;
-          else if (k === 'devol') { f.devol = v; var gd = v ? mov(v) : null; if (gd) f.importe = aInput(C.neto(gd)); }
           else if (k === 'salda') { f.salda = v; var d = C.deudas(V).filter(function (x) { return C.clavePersona(x.persona) === C.clavePersona(v); })[0]; if (d && !f.importe) f.importe = aInput(d.pendiente); }
           else f[k] = v;
           repintar(body, pintar()); return;
@@ -767,13 +751,11 @@
         if (!a) return;
         var act = a.dataset.act;
         if (act === 'toggle-comp') { f.compartido = !f.compartido; if (f.compartido && !f.personas.length) f.personas.push({ nombre: '', importe: '' }); }
-        else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else { f.saldaOn = true; f.devolOn = false; f.devol = ''; } }
+        else if (act === 'toggle-salda') { if (f.salda || f.saldaOn) { f.salda = ''; f.saldaOn = false; } else f.saldaOn = true; }
         else if (act === 'toggle-pend') {
           f.pendOn = !f.pendOn;
           if (f.pendOn) { if (!f.devolPend) f.devolPend = aInput(C.r2(C.num(f.importe) - C.num(f.devuelto))); if (!f.fechaDevolPend) f.fechaDevolPend = hoy(); }
         }
-        else if (act === 'toggle-devol') { f.devolOn = !f.devolOn; f.devol = ''; if (f.devolOn) { f.salda = ''; f.saldaOn = false; } }
-        else if (act === 'nueva-devol') { var orig = mov(f.id); if (orig) { cerrarHoja(); abrirMovimiento(null, { tipo: 'ingreso', devolOn: true, devol: orig.id, importe: aInput(C.neto(orig)) }); } return; }
         else if (act === 'calc') {
           var tg = a.dataset.t, esP = tg.charAt(0) === 'p', pi = esP ? +tg.slice(1) : -1;
           var titulo = tg === 'importe' ? 'Cantidad' : tg === 'miParte' ? 'Mi parte' : 'Debe ' + (f.personas[pi].nombre.trim() || 'esta persona');
@@ -798,26 +780,11 @@
       }
     });
 
-    /** La devolución no crea un movimiento: rebaja la compra original. */
-    function guardarDevolucion(importe) {
-      var g = f.devol ? mov(f.devol) : null;
-      if (!g) return error(body, 'Elige la compra que te han devuelto.');
-      var resto = C.neto(g);
-      if (importe > resto + 0.005) return error(body, 'De esa compra solo quedan ' + fmt(resto) + ' por devolver.');
-      var g2 = clone(g);
-      g2.devuelto = C.r2(C.devuelto(g) + importe); g2.fechaDevuelto = f.fecha;
-      g2.devolPend = ''; g2.fechaDevolPend = ''; // si estaba pendiente, ya ha llegado
-      var ops = [{ op: 'mov', mov: g2 }];
-      if (f.id) ops.push({ op: 'borrar', id: f.id }); // un ingreso que se convierte en devolución
-      cerrarHoja(true); commit(ops);
-      toast('↩️ «' + (g.concepto || g.cat) + '» ahora te cuesta ' + fmt(C.neto(g2)));
-    }
     function guardar() {
       var importe = C.r2(C.num(f.importe));
       if (!(importe > 0)) return error(body, 'Escribe la cantidad.');
       if (!f.fecha) return error(body, 'Elige la fecha.');
       if (f.tipo === 'ingreso' && f.saldaOn && !f.salda) return error(body, 'Elige quién te ha pagado.');
-      if (f.tipo === 'ingreso' && f.devolOn) return guardarDevolucion(importe);
       if (f.tipo !== 'transferencia' && !f.salda && !f.cat) return error(body, 'Elige una categoría.');
       var m2 = {
         id: f.id || C.uid(), fecha: f.fecha, tipo: f.tipo, importe: importe, cuenta: SANT, destino: '',
